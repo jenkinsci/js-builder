@@ -501,11 +501,19 @@ function bundleJs(moduleToBundle, as) {
 
             var hasJSX = paths.hasSourceFiles('jsx');
             var hasES6 = paths.hasSourceFiles('es6');
-            if (langConfig.ecmaVersion === 6 || hasJSX || hasES6) {
+            var babelConfig = readBabelConfig();
+
+            if (langConfig.ecmaVersion === 6 || hasJSX || hasES6 || babelConfig) {
                 var babelify = require('babelify');
                 var presets = [];
+                var plugins = [];
 
-                if (hasJSX) {
+                if (babelConfig) {
+                    logger.logInfo("Using custom config from .babelrc");
+                    presets = babelConfig.presets || [];
+                    plugins = babelConfig.plugins || [];
+                }
+                else if (hasJSX) {
                     presets.push('react');
                     dependencies.warnOnMissingDependency('babel-preset-react', 'You have JSX sources in this project. Transpiling these will require the "babel-preset-react" package.');
                     presets.push('es2015');
@@ -515,7 +523,10 @@ function bundleJs(moduleToBundle, as) {
                     dependencies.warnOnMissingDependency('babel-preset-es2015', 'You have ES6 sources in this project. Transpiling these will require the "babel-preset-es2015" package.');
                 }
 
-                bundler.transform(babelify, {presets: presets});
+                bundler.transform(babelify, {
+                    presets: presets,
+                    plugins: plugins
+                });
             }
 
             if (bundle.bundleTransforms) {
@@ -567,6 +578,20 @@ function bundleJs(moduleToBundle, as) {
     defineJSBundleTask(bundle, true);
 
     return bundle;
+}
+
+function readBabelConfig() {
+    if (fs.existsSync('.babelrc')) {
+        try {
+            var babelAsString = fs.readFileSync('.babelrc', {encoding: 'utf-8'});
+            return JSON.parse(babelAsString);
+        } catch (error) {
+            logger.logError("Error: could not read/parse .babelrc; file may be malformed.");
+            throw error;
+        }
+    }
+
+    return null;
 }
 
 function bundleCss(resource, format) {
