@@ -3,8 +3,6 @@ var gutil = require('gulp-util');
 var jasmine = require('gulp-jasmine');
 var jasmineReporters = require('jasmine-reporters');
 var browserify = require('browserify');
-var source = require('vinyl-source-stream');
-var transformTools = require('browserify-transform-tools');
 var _string = require('underscore.string');
 var fs = require('fs');
 var args = require('./internal/args');
@@ -13,13 +11,12 @@ var notifier = require('./internal/notifier');
 var paths = require('./internal/paths');
 var dependencies = require('./internal/dependecies');
 var maven = require('./internal/maven');
+var bundlegen = require('./internal/bundlegen');
 var testWebServer;
-var globalModuleMappingArgs = [];
 var skipBundle = skipBundle();
 var skipTest = (args.isArgvSpecified('--skipTest') || args.isArgvSpecified('--skipTests'));
 
 var cwd = process.cwd();
-var hasJenkinsJsModulesDependency = dependencies.hasJenkinsJsModulesDep();
 
 var bundles = []; // see exports.bundle function
 var bundleDependencyTaskNames = ['log-env'];
@@ -224,12 +221,11 @@ exports.onTaskEnd = function(taskName, callback) {
 exports.withExternalModuleMapping = function(from, to, config) {
     var moduleMapping = toModuleMapping(from, to, config);
     if (moduleMapping) {
-        globalModuleMappingArgs.push(moduleMapping);
+        bundlegen.addGlobalModuleMapping(moduleMapping);
     }
     return exports;
 };
 
-var preBundleListeners = [];
 /**
  * Add a listener to be called just before Browserify starts bundling.
  * <p>
@@ -239,7 +235,7 @@ var preBundleListeners = [];
  * @param listener The listener to add.
  */
 exports.onPreBundle = function(listener) {
-    preBundleListeners.push(listener);
+    bundlegen.onPreBundle(listener);
     return exports;
 };
 
@@ -610,48 +606,10 @@ function bundleCss(resource, format) {
     
     var bundleTaskName = format + '_bundle_' + bundle.as;
     exports.defineBundleTask(bundleTaskName, function() {
-        var ncp = require('ncp').ncp;
-
-        if (!bundle.bundleInDir) {
-            var adjunctBase = setAdjunctInDir(bundle);
-            logger.logInfo('CSS resource "' + resource + '" will be available in Jenkins as adjunct "' + adjunctBase + '.' + bundle.as + '".')
-        }
-        
-        paths.mkdirp(bundle.bundleInDir);
-        ncp(folder, bundle.bundleInDir, function (err) {
-            if (err) {
-                return logger.logError(err);
-            }
-            if (bundle.format === 'less') {
-                less(resource, bundle.bundleInDir);
-            }
-            // Add a .adjunct marker file in each of the subdirs
-            paths.walkDirs(bundle.bundleInDir, function(dir) {
-                var dotAdjunct = dir + '/.adjunct';
-                if (!fs.existsSync(dotAdjunct)) {
-                    fs.writeFileSync(dotAdjunct, '');
-                }
-            });
-        });
+        return bundlegen.doCSSBundle(bundle, resource);
     });
     
     return bundle;
-}
-
-function setAdjunctInDir(bundle) {
-    var adjunctBase = 'org/jenkins/ui/jsmodules';
-    if (bundle.bundleExportNamespace) {
-        adjunctBase += '/' + normalizeForJavaIdentifier(bundle.bundleExportNamespace);
-    } else if (maven.isMavenProject) {
-        adjunctBase += '/' + normalizeForJavaIdentifier(maven.getArtifactId());
-    }
-    bundle.bundleInDir = 'target/classes/' + adjunctBase;
-    return _string.replaceAll(adjunctBase, '/', '\.');
-}
-
-function normalizeForJavaIdentifier(string) {
-    // Replace all non alphanumerics with an underscore.
-    return string.replace(/\W/g, '_');
 }
 
 function toModuleMapping(from, to, config) {
@@ -800,151 +758,6 @@ function skipBundle() {
     }
     
     return args.isArgvSpecified('--skipBundle');
-}
-
-function addModuleMappingTransforms(bundle, bundler) {
-    var moduleMappings = bundle.moduleMappings;
-    var requiredModuleMappings = [];
-
-    if (moduleMappings.length > 0) {
-        var requireTransform = transformTools.makeRequireTransform("requireTransform",
-            {evaluateArguments: true},
-            function(args, opts, cb) {
-                var required = args[0];
-                for (var i = 0; i < moduleMappings.length; i++) {
-                    var mapping = moduleMappings[i];
-                    if (mapping.from === required) {
-                        if (mapping.config.require) {
-                            return cb(null, "require('" + mapping.config.require + "')");
-                        } else {
-                            if (requiredModuleMappings.indexOf(mapping.to) === -1) {
-                                requiredModuleMappings.push(mapping.to);
-                            }
-                            return cb(null, "require('@jenkins-cd/js-modules').require('" + mapping.to + "')");
-                        }
-                    }
-                }
-                return cb();
-            });
-        bundler.transform(requireTransform);
-    }
-    var importExportApplied = false;
-    var importExportTransform = transformTools.makeStringTransform("importExportTransform", {},
-        function (content, opts, done) {
-            if (!importExportApplied) {
-                try {
-                    if(!hasJenkinsJsModulesDependency) {
-                        throw "This module must have a dependency on the '@jenkins-cd/js-modules' package. Please run 'npm install --save @jenkins-cd/js-modules'.";
-                    }
-                    
-                    var exportNamespace = 'undefined'; // global namespace
-                    var exportModule = undefined;
-                    
-                    if (bundle.exportEmptyModule) {
-                        exportModule = '{}'; // exporting nothing (an "empty" module object)
-                    }
-
-                    if (bundle.bundleExportNamespace) {
-                        // It's a hpi plugin, so use it's name as the export namespace.
-                        exportNamespace = "'" + bundle.bundleExportNamespace + "'";
-                    }
-                    if (bundle.bundleExport) {
-                        // export function was called, so export the module.
-                        exportModule = 'module'; // export the module
-                    }
-
-                    if(exportModule) {
-                        // Always call export, even if the export function was not called on the builder instance.
-                        // If the export function was not called, we export nothing (see above). In this case, it just
-                        // generates an event for any modules that need to sync on the load event for the module.
-                        content += "\n" +
-                            "\t\trequire('@jenkins-cd/js-modules').export(" + exportNamespace + ", '" + bundle.as + "', " + exportModule + ");";
-                    }
-                    content += "\n\n";
-
-                    var wrappedContent =
-                        "var ___$$$___jsModules = require('@jenkins-cd/js-modules');\n\n" +
-                        "___$$$___jsModules.whoami('" + bundle.bundleExportNamespace + ":" + bundle.as + "');\n\n" +
-                        "/*** Start Module Exec Function ***************************************/\n" +
-                        "function ___$$$___exec() {\n" +
-                            content +
-                        //"\n" +
-                        //"   console.debug('jenkins-js-modules: JS bundle " + (bundle.bundleExportNamespace || 'nns') + ":" + bundle.as + " started.');" +
-                        //"\n" +
-                        "}\n" +
-                        "/*** End Module Exec Function   ***************************************/\n" +
-                        "\n" +
-                        "if (___$$$___requiredModuleMappings.length > 0) {\n" +
-                        //"\n" +
-                        //"   console.debug('jenkins-js-modules: JS bundle " + (bundle.bundleExportNamespace || 'nns') + ":" + bundle.as + " waiting on bundle loads: ', ___$$$___requiredModuleMappings);" +
-                        //"\n" +
-                        "    ___$$$___jsModules.import.apply(___$$$___jsModules.import, ___$$$___requiredModuleMappings)\n" +
-                        "        .onFulfilled(function() {\n" +
-                        "\n" +
-                        "        ___$$$___exec();\n" +
-                        "\n" +
-                        "    });\n\n" +
-                        "} else {\n\n" +
-                        "    ___$$$___exec();\n\n" +
-                        "}";
-                    
-                    // perform addModuleCSSToPage actions for mappings that requested it.
-                    // We don't need the imports to complete before adding these. We can just add
-                    // them immediately.
-                    var jsmodules = require('@jenkins-cd/js-modules/js/internal');
-                    for (var i = 0; i < moduleMappings.length; i++) {
-                        var mapping = moduleMappings[i];
-                        var addDefaultCSS = mapping.config.addDefaultCSS;
-                        if (addDefaultCSS && addDefaultCSS === true) {
-                            var parsedModuleQName = jsmodules.parseResourceQName(mapping.to);
-                            wrappedContent +=
-                                "require('@jenkins-cd/js-modules').addModuleCSSToPage('" + parsedModuleQName.namespace + "', '" + parsedModuleQName.moduleName + "');\n";
-                        }
-                    }
-
-                    return done(null, wrappedContent);
-                } finally {
-                    importExportApplied = true;
-                }
-            } else {
-                return done(null, content);
-            }
-        });
-
-    bundler.transform(importExportTransform);
-
-    var through = require('through2');
-    bundler.pipeline.get('deps').push(through.obj(function (row, enc, next) {
-        if (row.entry) {
-            row.source = "var ___$$$___requiredModuleMappings = " + JSON.stringify(requiredModuleMappings) + ";\n\n" + row.source;
-        }
-        this.push(row);
-        next();
-    }));
-}
-
-function less(src, targetDir) {
-    var less = require('gulp-less');
-    gulp.src(src)
-        .pipe(less().on('error', function (err) {
-            logger.logError('LESS processing error:');
-            if (err) {
-                logger.logError('\tmessage: ' + err.message);
-                logger.logError('\tline #:  ' + err.line);
-                if (err.extract) {
-                    logger.logError('\textract: ' + JSON.stringify(err.extract));
-                }
-            }
-            if (exports.isRebundle() || exports.isRetest()) {
-                notifier.notify('LESS processing error', 'See console for details.');
-                // ignore failures if we are running rebundle/retesting.
-                this.emit('end');
-            } else {
-                throw 'LESS processing error. See above for details.';
-            }
-        }))
-        .pipe(gulp.dest(targetDir));
-    logger.logInfo("LESS CSS pre-processing completed to '" + targetDir + "'.");
 }
 
 function _startTestWebServer(config) {
