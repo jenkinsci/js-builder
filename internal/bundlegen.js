@@ -132,6 +132,10 @@ exports.doJSBundle = function(bundle, applyImports) {
     // Allow reading of stuff from the filesystem.
     bundler.transform(require('brfs'));
 
+    var bufferedTextTransform = require('./stream-transforms/buffered-text-accumulator-transform');
+    var requireStubTransform = require('./stream-transforms/require-stub-transform');
+    var pack = require('browser-pack');
+
     return bundler.bundle()
         .on('error', function (err) {
             logger.logError('Browserify bundle processing error');
@@ -146,9 +150,11 @@ exports.doJSBundle = function(bundle, applyImports) {
                 throw 'Browserify bundle processing error. See above for details.';
             }
         })
+        .pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
+        .pipe(requireStubTransform(bundle.moduleMappings)) // transform the require stubs
+        .pipe(pack()) // repack the bundle after the previous transform
         .pipe(source(bundle.bundleOutputFile))
-        .pipe(gulp.dest(bundleTo))
-        ;
+        .pipe(gulp.dest(bundleTo));
 };
 
 exports.doCSSBundle = function(bundle, resource) {
@@ -214,19 +220,15 @@ function addModuleMappingTransforms(bundle, bundler) {
                 for (var i = 0; i < moduleMappings.length; i++) {
                     var mapping = moduleMappings[i];
                     if (mapping.from === required) {
-                        if (mapping.config.require) {
-                            return cb(null, "require('" + mapping.config.require + "')");
-                        } else {
-                            if (requiredModuleMappings.indexOf(mapping.to) === -1) {
-                                requiredModuleMappings.push(mapping.to);
-                            }
-                            return cb(null, "require('@jenkins-cd/js-modules').require('" + mapping.to + "')");
+                        if (requiredModuleMappings.indexOf(mapping.to) === -1) {
+                            requiredModuleMappings.push(mapping.to);
                         }
+                        return cb();
                     }
                 }
                 return cb();
             });
-        bundler.transform(requireTransform);
+        bundler.transform({ global: true }, requireTransform);
     }
     var importExportApplied = false;
     var importExportTransform = transformTools.makeStringTransform("importExportTransform", {},
@@ -312,6 +314,19 @@ function addModuleMappingTransforms(bundle, bundler) {
         });
 
     bundler.transform(importExportTransform);
+
+    // Tell browserify to "ignore" modules/packages for which
+    // we have a mapping. The result of this will be a bundle that
+    // has "empty" require map entries for the modules/packages in question
+    // i.e. will have a blanked out source definition. We can then manipulate
+    // the generated bundle
+    // See https://github.com/substack/node-browserify#bignorefile
+    for (var i = 0; i < moduleMappings.length; i++) {
+        var mapping = moduleMappings[i];
+        if (mapping.from) {
+            bundler.ignore(mapping.from);
+        }
+    }
 
     var through = require('through2');
     bundler.pipeline.get('deps').push(through.obj(function (row, enc, next) {

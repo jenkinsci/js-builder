@@ -1,6 +1,6 @@
 {
   "name": "@jenkins-cd/js-builder",
-  "version": "0.0.35",
+  "version": "0.0.36-beta2",
   "description": "Jenkins CI JavaScript Build utilities.",
   "main": "index.js",
   "scripts": {
@@ -19,6 +19,8 @@
     "babel-preset-es2015": "^6.5.0",
     "babelify": "^7.x",
     "brfs": "^1.4.3",
+    "browser-pack": "^6.0.1",
+    "browser-unpack": "^1.1.1",
     "browserify": "^12.0.1",
     "browserify-transform-tools": "^1.4.2",
     "eslint": "^2.2.0",
@@ -37,6 +39,7 @@
     "node-http-server": "^3.0.5",
     "node-notifier": "^4.5.0",
     "through2": "^2.0.1",
+    "transform": "^1.1.2",
     "underscore.string": "3.3.4",
     "vinyl-source-stream": "^1.1.0",
     "window-handle": "0.0.6",
