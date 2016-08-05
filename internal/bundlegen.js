@@ -315,19 +315,6 @@ function addModuleMappingTransforms(bundle, bundler) {
 
     bundler.transform(importExportTransform);
 
-    // Tell browserify to "ignore" modules/packages for which
-    // we have a mapping. The result of this will be a bundle that
-    // has "empty" require map entries for the modules/packages in question
-    // i.e. will have a blanked out source definition. We can then manipulate
-    // the generated bundle
-    // See https://github.com/substack/node-browserify#bignorefile
-    for (var i = 0; i < moduleMappings.length; i++) {
-        var mapping = moduleMappings[i];
-        if (mapping.from) {
-            bundler.ignore(mapping.from);
-        }
-    }
-
     var through = require('through2');
     bundler.pipeline.get('deps').push(through.obj(function (row, enc, next) {
         if (row.entry) {
