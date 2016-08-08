@@ -39,7 +39,7 @@ describe("paths test", function () {
         paths.walkDirs(cwd + '/spec', function (dir) {
             dirs.push(dir);
         });
-        expect(dirs.length).toBe(3); // yeah, this will need to be changed if folders are added. That's fine.
+        expect(dirs.length).toBe(4); // yeah, this will need to be changed if folders are added. That's fine.
     });
     
     it("- test walkDirs - with stopAtDepth", function () {

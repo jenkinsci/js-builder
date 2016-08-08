@@ -132,8 +132,8 @@ exports.doJSBundle = function(bundle, applyImports) {
     // Allow reading of stuff from the filesystem.
     bundler.transform(require('brfs'));
 
-    var bufferedTextTransform = require('./stream-transforms/buffered-text-accumulator-transform');
-    var requireStubTransform = require('./stream-transforms/require-stub-transform');
+    var bufferedTextTransform = require('./pipeline-transforms/buffered-text-accumulator-transform');
+    var requireStubTransform = require('./pipeline-transforms/require-stub-transform');
     var pack = require('browser-pack');
 
     return bundler.bundle()
@@ -151,7 +151,7 @@ exports.doJSBundle = function(bundle, applyImports) {
             }
         })
         .pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
-        .pipe(requireStubTransform(bundle.moduleMappings)) // transform the require stubs
+        .pipe(requireStubTransform.pipelinePlugin(bundle.moduleMappings)) // transform the require stubs
         .pipe(pack()) // repack the bundle after the previous transform
         .pipe(source(bundle.bundleOutputFile))
         .pipe(gulp.dest(bundleTo));

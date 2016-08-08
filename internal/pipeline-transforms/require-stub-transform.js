@@ -8,24 +8,24 @@ var through = require('through2');
 var logger = require('../logger');
 var unpack = require('browser-unpack');
 
-function plugin(moduleMappings) {
-    var stream = through.obj(function (bundle, encoding, callback) {
+function pipelingPlugin(moduleMappings) {
+    return through.obj(function (bundle, encoding, callback) {
         if (!(bundle instanceof Buffer)) {
             callback(new Error('Sorry, this transform only supports Buffers.'));
             return;
         }
 
         var bundleContent = bundle.toString('utf8');
-        var packEntries = updateBundleStubs(bundleContent, moduleMappings);
+        var packEntries  = unpack(bundleContent);
+
+        updateBundleStubs(packEntries, moduleMappings);
 
         this.push(JSON.stringify(packEntries));
         callback();
     });
-    return stream;
 }
 
-function updateBundleStubs(bundleContent, moduleMappings) {
-    var packEntries  = unpack(bundleContent);
+function updateBundleStubs(packEntries, moduleMappings) {
     var modulesDefs = extractModuleDefs(packEntries);
 
     addDependantsToDefs(packEntries, modulesDefs);
@@ -42,20 +42,69 @@ function updateBundleStubs(bundleContent, moduleMappings) {
     } else {
         for (var i in moduleMappings) {
             var moduleMapping = moduleMappings[i];
-            var modulesDef = modulesDefs[moduleMapping.from];
+            var moduleDef = modulesDefs[moduleMapping.from];
 
-            if (modulesDef) {
-                var packEntry = getPackEntryById(packEntries, modulesDef.id);
+            if (moduleDef) {
+                var packEntry = getPackEntryById(packEntries, moduleDef.id);
 
-                packEntry.source = "module.exports = require('@jenkins-cd/js-modules').require('" + moduleMapping.to + "')";
-                packEntry.deps['@jenkins-cd/js-modules'] = jsModulesModuleDef.id;
+                packEntry.source = "module.exports = require('@jenkins-cd/js-modules').require('" + moduleMapping.to + "');";
+                packEntry.deps = {
+                    '@jenkins-cd/js-modules': jsModulesModuleDef.id
+                };
+
+                // Go to all of the dependencies and remove this module from
+                // it's list of dependants.
+                removeDependant(moduleDef, modulesDefs, packEntries);
             }
         }
 
         // Keeping as it's handy for debug purposes.
         //require('fs').writeFileSync('./target/bundlepack.json', JSON.stringify(packEntries, undefined, 4));
 
-        return packEntries;
+        return {
+            packEntries: packEntries,
+            modulesDefs: modulesDefs,
+            getPackEntryById: function(id) {
+                return getPackEntryById(packEntries, id);
+            },
+            getPackEntryByName: function(name) {
+                var moduleDef = modulesDefs[name];
+                if (!moduleDef) {
+                    return undefined;
+                }
+                return getPackEntryById(packEntries, moduleDef.id);
+            },
+            getModuleDefById: function(id) {
+                return getModuleDefById(modulesDefs, id);
+            },
+            getModuleDefByName: function(name) {
+                return modulesDefs[name];
+            }
+        };
+    }
+}
+
+function removeDependant(moduleDefToRemove, modulesDefs, packEntries) {
+    for (var moduleName in modulesDefs) {
+        if (modulesDefs.hasOwnProperty(moduleName)) {
+            var moduleDef = modulesDefs[moduleName];
+            if (moduleDef !== moduleDefToRemove) {
+                var dependantEntryIndex = moduleDef.dependants.indexOf(moduleDefToRemove.id);
+                if (dependantEntryIndex !== -1) {
+                    moduleDef.dependants.splice(dependantEntryIndex, 1);
+                    if (moduleDef.dependants.length === 0) {
+                        // If this module no longer has any dependants (i.e. nothing depends on it),
+                        // that means that we can remove this module from the bundle. In turn, that
+                        // also means that we can remove this module from the dependants list of other
+                        // modules in the bundle. Therefore, there's a potential cascading effect that
+                        // prunes the bundle of modules that are no longer in use as a result of
+                        // mapping/stubbing modules.
+                        removePackEntryById(packEntries, moduleDef.id);
+                        removeDependant(moduleDef, modulesDefs, packEntries);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -132,6 +181,15 @@ function getPackEntryById(packEntries, id) {
     return undefined;
 }
 
+function removePackEntryById(packEntries, id) {
+    for (var i in packEntries) {
+        if (packEntries[i].id === id) {
+            packEntries.splice(i, 1);
+            return
+        }
+    }
+}
+
 function getModuleDefById(modulesDefs, id) {
     for (var moduleName in modulesDefs) {
         if (modulesDefs.hasOwnProperty(moduleName)) {
@@ -145,14 +203,5 @@ function getModuleDefById(modulesDefs, id) {
     return undefined;
 }
 
-function streamToString(stream, callback) {
-    var str = '';
-    stream.on('data', function (chunk) {
-        str += chunk;
-    });
-    stream.on('end', function () {
-        callback(str);
-    });
-}
-
-module.exports = plugin;
+exports.pipelinePlugin = pipelingPlugin;
+exports.updateBundleStubs = updateBundleStubs;
