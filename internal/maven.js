@@ -34,9 +34,9 @@ exports.isHPI = function() {
 function assertIsMavenProject(preamble) {
     if (!exports.isMavenProject) {
         if (preamble) {
-            throw preamble + ' - This is not a maven project.';
+            throw new Error(preamble + ' - This is not a maven project.');
         } else {
-            throw 'This is not a maven project.';
+            throw new Error('This is not a maven project.');
         }
     }
 }

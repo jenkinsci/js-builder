@@ -147,7 +147,7 @@ exports.doJSBundle = function(bundle, applyImports) {
                 // ignore failures if we are running rebundle/retesting.
                 this.emit('end');
             } else {
-                throw 'Browserify bundle processing error. See above for details.';
+                throw new Error('Browserify bundle processing error. See above for details.');
             }
         })
         .pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
@@ -201,7 +201,7 @@ function less(src, targetDir) {
                 // ignore failures if we are running rebundle/retesting.
                 this.emit('end');
             } else {
-                throw 'LESS processing error. See above for details.';
+                throw new Error('LESS processing error. See above for details.');
             }
         }))
         .pipe(gulp.dest(targetDir));
@@ -236,7 +236,7 @@ function addModuleMappingTransforms(bundle, bundler) {
             if (!importExportApplied) {
                 try {
                     if(!hasJenkinsJsModulesDependency) {
-                        throw "This module must have a dependency on the '@jenkins-cd/js-modules' package. Please run 'npm install --save @jenkins-cd/js-modules'.";
+                        throw new Error("This module must have a dependency on the '@jenkins-cd/js-modules' package. Please run 'npm install --save @jenkins-cd/js-modules'.");
                     }
 
                     var exportNamespace = 'undefined'; // global namespace

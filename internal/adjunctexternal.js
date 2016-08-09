@@ -9,7 +9,7 @@ exports.bundleFor = function(builder, packageName) {
     var extVersionMetadata = dependencies.externalizedVersionMetadata(packageName);
     
     if (!extVersionMetadata) {
-        throw 'Unable to create Jenkins adjunct based external module bundle for package "' + packageName + '". This package is not installed.';
+        throw new Error('Unable to create Jenkins adjunct based external module bundle for package "' + packageName + '". This package is not installed.');
     }
 
     var normalizedPackageName = extVersionMetadata.normalizedPackageName;
