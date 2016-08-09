@@ -28,6 +28,13 @@ function pipelingPlugin(moduleMappings) {
 function updateBundleStubs(packEntries, moduleMappings) {
     var modulesDefs = extractModuleDefs(packEntries);
 
+    // We could remove unused modules from the packEntries at this point i.e. modules
+    // that did not make an entry in modulesDefs are modules that nothing depends on.
+    // Is there any good reason why these can not be removed from the bundle? Is there
+    // a reason why browserify did not remove them? I've (TF) seen this and I'm not
+    // talking about the entry module, which would often not have anything depending
+    // on it.
+
     addDependantsToDefs(packEntries, modulesDefs);
     addDependanciesToDefs(packEntries, modulesDefs);
 
@@ -46,6 +53,13 @@ function updateBundleStubs(packEntries, moduleMappings) {
 
             if (moduleDef) {
                 var packEntry = getPackEntryById(packEntries, moduleDef.id);
+
+                if (!packEntry) {
+                    // This can happen if the pack with that ID was already removed
+                    // because it's no longer being used (has nothing depending on it).
+                    // See removeDependant and how it calls removePackEntryById.
+                    continue;
+                }
 
                 packEntry.source = "module.exports = require('@jenkins-cd/js-modules').require('" + moduleMapping.to + "');";
                 packEntry.deps = {
@@ -155,7 +169,8 @@ function addDependanciesToDefs(packEntries, modulesDefs) {
         if (!moduleDef) {
             // This is only expected if it's the entry module.
             if (!packEntry.entry) {
-                logger.logWarn('No moduleDef created for moduleId ' + packEntry.id);
+                // No moduleDef created for moduleId with that pack ID. This module probably has
+                // nothing depending on it (and in reality, could probably be removed from the bundle).
             }
             continue;
         }
