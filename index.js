@@ -348,6 +348,14 @@ function bundleJs(moduleToBundle, as) {
             // Do not add mappings to itself.
             return bundle;
         }
+
+        for (var i in bundle.moduleMappings) {
+            if (bundle.moduleMappings[i].from === moduleMapping.from) {
+                logger.logWarn('Ignoring require mapping of "' + moduleMapping.from + '" to "' + moduleMapping.to + '". The bundle already has a mapping for "' + moduleMapping.from + '".');
+                return bundle;
+            }
+        }
+
         bundle.moduleMappings.push(moduleMapping);
         return bundle;
     };
