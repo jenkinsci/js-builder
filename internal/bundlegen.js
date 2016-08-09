@@ -42,7 +42,7 @@ exports.doJSBundle = function(bundle, applyImports) {
     // Add all global mappings.
     if (bundle.useGlobalModuleMappings === true) {
         for (var i = 0; i < globalModuleMappings.length; i++) {
-            bundle._withExternalModuleMapping(globalModuleMappings[i]);
+            bundle._import(globalModuleMappings[i]);
         }
     }
 

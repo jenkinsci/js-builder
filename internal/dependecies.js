@@ -69,11 +69,11 @@ exports.assertHasJenkinsJsModulesDependency = function(message) {
 };
 
 exports.processExternalizedDependencies = function(builder) {
-    if (packageJson.jenkinscd && packageJson.jenkinscd.extDependencies) {
-        var extDependencies = packageJson.jenkinscd.extDependencies;
-        if (extDependencies.length) {
-            for (var i = 0; i < extDependencies.length; i++) {
-                builder.withExternalModuleMapping(extDependencies[i]);
+    if (packageJson.jenkinscd) {
+        var imports = (packageJson.jenkinscd.import || packageJson.jenkinscd.extDependencies);
+        if (imports) {
+            for (var i = 0; i < imports.length; i++) {
+                builder.import(imports[i]);
             }
         }
     }

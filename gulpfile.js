@@ -9,7 +9,7 @@ builder.src(['./internal', './js']);
 // this for testing the global withExternalModuleMapping
 builder.bundle('spec/abcxyzV2.js').export('abcxyz');
 
-builder.withExternalModuleMapping('abcxyz', 'abcxyz:abcxyzV2');
+builder.import('abcxyz', 'abcxyz:abcxyzV2');
 
 // Create some test bundles and check them in the specs
 
@@ -21,13 +21,13 @@ builder.bundle('spec/testmodule.js', 'testmodule_1')
 //  - Has import 
 //  - No use of default CSS 
 builder.bundle('spec/testmodule.js', 'testmodule_2')
-    .withExternalModuleMapping('underscore.string')
+    .import('underscore.string')
     .inDir('target/testmodule');
 
 //  - Has import 
 //  - Has use of default CSS 
 builder.bundle('spec/testmodule.js', 'testmodule_3')
-    .withExternalModuleMapping('underscore.string', {addDefaultCSS: true})
+    .import('underscore.string', {addDefaultCSS: true})
     .inDir('target/testmodule')
     .generateNoImportsBundle();
 
@@ -37,5 +37,5 @@ builder.bundle('spec/frameworky/style.less');
 
 // An externalized package where the name has an NPM org in it 
 builder.bundle('spec/testmodule.js', 'testmodule_ext_org')
-    .withExternalModuleMapping('@jenkins-cd/js-modules')
+    .import('@jenkins-cd/js-modules')
     .inDir('target/testmodule');

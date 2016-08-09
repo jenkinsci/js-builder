@@ -218,12 +218,17 @@ exports.onTaskEnd = function(taskName, callback) {
     });
 };
 
-exports.withExternalModuleMapping = function(from, to, config) {
-    var moduleMapping = toModuleMapping(from, to, config);
+exports.import = function(module, to, config) {
+    var moduleMapping = toModuleMapping(module, to, config);
     if (moduleMapping) {
         bundlegen.addGlobalModuleMapping(moduleMapping);
     }
     return exports;
+};
+
+exports.withExternalModuleMapping = function(from, to, config) {
+    logger.logWarn('DEPRECATED use of builder.withExternalModuleMapping function. Change to builder.import.');
+    return exports.import(from, to, config);
 };
 
 /**
@@ -340,7 +345,7 @@ function bundleJs(moduleToBundle, as) {
         return bundle;
     };
     
-    bundle._withExternalModuleMapping = function(moduleMapping) {
+    bundle._import = function(moduleMapping) {
         if (skipBundle) {
             return bundle;
         }
@@ -360,10 +365,15 @@ function bundleJs(moduleToBundle, as) {
         return bundle;
     };
     
-    bundle.withExternalModuleMapping = function(from, to, config) {
-        var moduleMapping = toModuleMapping(from, to, config);
-        bundle._withExternalModuleMapping(moduleMapping);
+    bundle.import = function(module, to, config) {
+        var moduleMapping = toModuleMapping(module, to, config);
+        bundle._import(moduleMapping);
         return bundle;
+    };
+
+    bundle.withExternalModuleMapping = function(from, to, config) {
+        logger.logWarn('DEPRECATED use of bundle.withExternalModuleMapping function. Change to bundle.import.');
+        return bundle.import(from, to, config);
     };
 
     bundle.less = function(src, targetDir) {
