@@ -132,11 +132,7 @@ exports.doJSBundle = function(bundle, applyImports) {
     // Allow reading of stuff from the filesystem.
     bundler.transform(require('brfs'));
 
-    var bufferedTextTransform = require('./pipeline-transforms/buffered-text-accumulator-transform');
-    var requireStubTransform = require('./pipeline-transforms/require-stub-transform');
-    var pack = require('browser-pack');
-
-    return bundler.bundle()
+    var bundleOutput = bundler.bundle()
         .on('error', function (err) {
             logger.logError('Browserify bundle processing error');
             if (err) {
@@ -149,11 +145,19 @@ exports.doJSBundle = function(bundle, applyImports) {
             } else {
                 throw new Error('Browserify bundle processing error. See above for details.');
             }
-        })
-        .pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
-        .pipe(requireStubTransform.pipelinePlugin(bundle.moduleMappings)) // transform the require stubs
-        .pipe(pack()) // repack the bundle after the previous transform
-        .pipe(source(bundle.bundleOutputFile))
+        });
+
+    if (applyImports) {
+        var bufferedTextTransform = require('./pipeline-transforms/buffered-text-accumulator-transform');
+        var requireStubTransform = require('./pipeline-transforms/require-stub-transform');
+        var pack = require('browser-pack');
+
+        bundleOutput = bundleOutput.pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
+            .pipe(requireStubTransform.pipelinePlugin(bundle.moduleMappings)) // transform the require stubs
+            .pipe(pack()); // repack the bundle after the previous transform
+    }
+
+    return bundleOutput.pipe(source(bundle.bundleOutputFile))
         .pipe(gulp.dest(bundleTo));
 };
 

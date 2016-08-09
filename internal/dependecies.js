@@ -116,24 +116,43 @@ exports.externalizedVersionMetadata = function(depPackageName) {
 };
 
 function parseVersion(version) {
-    // remove anything that's not a digit, a dot or an x.
-    version = version.replace(/[^\d.x]/g, '');
+    function removeNonDigits(string) {
+        // remove anything that's not a digit, a dot or an x.
+        return string.replace(/[^\d.x]/g, '');
+    }
     
     var versionTokens = version.split('.');
     var parsedVer = {};
     
-    if (versionTokens.length >= 3) {
-        parsedVer.patch = versionTokens[2]
+    parsedVer.prerelease = undefined;
+
+    var patchAndPrerelease = '';
+    for (var i = 2; i < versionTokens.length; i++) {
+        if (patchAndPrerelease.length > 0) {
+            patchAndPrerelease += '.';
+        }
+        patchAndPrerelease += versionTokens[i];
+
+        var separatorIdx = patchAndPrerelease.indexOf('-');
+        if (separatorIdx !== -1) {
+            parsedVer.patch = removeNonDigits(patchAndPrerelease.substring(0, separatorIdx));
+            parsedVer.prerelease = patchAndPrerelease.substring(separatorIdx + 1);
+        } else {
+            parsedVer.patch = removeNonDigits(patchAndPrerelease);
+        }
     }
+
     if (versionTokens.length >= 2) {
-        parsedVer.minor = versionTokens[1]
+        parsedVer.minor = removeNonDigits(versionTokens[1]);
     }
     if (versionTokens.length >= 1) {
-        parsedVer.major = versionTokens[0]
+        parsedVer.major = removeNonDigits(versionTokens[0]);
     }
     
     return parsedVer;
 }
+
+exports.parseVersion = parseVersion;
 
 /**
  * Normalize an NPM package name by removing all non alpha numerics and replacing
