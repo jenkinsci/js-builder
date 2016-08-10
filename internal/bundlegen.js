@@ -12,6 +12,8 @@ var browserify = require('browserify');
 var source = require('vinyl-source-stream');
 var transformTools = require('browserify-transform-tools');
 var _string = require('underscore.string');
+var templates = require('./templates');
+var entryModuleTemplate = templates.getTemplate('entry-module.hbs');
 
 var hasJenkinsJsModulesDependency = dependencies.hasJenkinsJsModulesDep();
 var preBundleListeners = [];
@@ -267,40 +269,22 @@ function addModuleMappingTransforms(bundle, bundler) {
                         exportModule = 'module'; // export the module
                     }
 
+                    var templateParams = {
+                        bundle: bundle,
+                        content: content,
+                        css: []
+                    };
+
                     if(exportModule) {
                         // Always call export, even if the export function was not called on the builder instance.
                         // If the export function was not called, we export nothing (see above). In this case, it just
                         // generates an event for any modules that need to sync on the load event for the module.
-                        content += "\n" +
-                            "\t\trequire('@jenkins-cd/js-modules').export(" + exportNamespace + ", '" + bundle.as + "', " + exportModule + ");";
+                        templateParams.entryExport = {
+                            namespace: exportNamespace,
+                            module: exportModule
+                        };
                     }
                     content += "\n\n";
-
-                    var wrappedContent =
-                        "var ___$$$___jsModules = require('@jenkins-cd/js-modules');\n\n" +
-                        "___$$$___jsModules.whoami('" + bundle.bundleExportNamespace + ":" + bundle.as + "');\n\n" +
-                        "/*** Start Module Exec Function ***************************************/\n" +
-                        "function ___$$$___exec() {\n" +
-                            content +
-                        //"\n" +
-                        //"   console.debug('jenkins-js-modules: JS bundle " + (bundle.bundleExportNamespace || 'nns') + ":" + bundle.as + " started.');" +
-                        //"\n" +
-                        "}\n" +
-                        "/*** End Module Exec Function   ***************************************/\n" +
-                        "\n" +
-                        "if (___$$$___requiredModuleMappings.length > 0) {\n" +
-                        //"\n" +
-                        //"   console.debug('jenkins-js-modules: JS bundle " + (bundle.bundleExportNamespace || 'nns') + ":" + bundle.as + " waiting on bundle loads: ', ___$$$___requiredModuleMappings);" +
-                        //"\n" +
-                        "    ___$$$___jsModules.import.apply(___$$$___jsModules.import, ___$$$___requiredModuleMappings)\n" +
-                        "        .onFulfilled(function() {\n" +
-                        "\n" +
-                        "        ___$$$___exec();\n" +
-                        "\n" +
-                        "    });\n\n" +
-                        "} else {\n\n" +
-                        "    ___$$$___exec();\n\n" +
-                        "}";
 
                     // perform addModuleCSSToPage actions for mappings that requested it.
                     // We don't need the imports to complete before adding these. We can just add
@@ -311,10 +295,11 @@ function addModuleMappingTransforms(bundle, bundler) {
                         var addDefaultCSS = mapping.config.addDefaultCSS;
                         if (addDefaultCSS && addDefaultCSS === true) {
                             var parsedModuleQName = jsmodules.parseResourceQName(mapping.to);
-                            wrappedContent +=
-                                "require('@jenkins-cd/js-modules').addModuleCSSToPage('" + parsedModuleQName.namespace + "', '" + parsedModuleQName.moduleName + "');\n";
+                            templateParams.css.push(parsedModuleQName);
                         }
                     }
+
+                    var wrappedContent = entryModuleTemplate(templateParams);
 
                     return done(null, wrappedContent);
                 } finally {

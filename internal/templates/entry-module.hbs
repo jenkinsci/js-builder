@@ -1,0 +1,24 @@
+var ___$$$___jsModules = require('@jenkins-cd/js-modules');
+
+___$$$___jsModules.whoami('{{bundle.bundleExportNamespace}}:{{bundle.as}}');
+
+/*** Start Module Exec Function ***************************************/
+function ___$$$___exec() {
+    {{content}}
+}
+/*** End Module Exec Function   ***************************************/
+
+if (___$$$___requiredModuleMappings.length > 0) {
+    ___$$$___jsModules.import.apply(___$$$___jsModules.import, ___$$$___requiredModuleMappings)
+        .onFulfilled(function() {
+        ___$$$___exec();
+
+        // Do exports, if any ....
+        {{#if entryExport}}___$$$___jsModules.export({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
+        {{#each css}}
+        ___$$$___jsModules.addModuleCSSToPage('{{namespace}}', '{{moduleName}}');
+        {{/each}}
+    });
+} else {
+    ___$$$___exec();
+}
