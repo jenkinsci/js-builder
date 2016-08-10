@@ -4,6 +4,8 @@ var logger = require('./logger');
 var paths = require('./paths');
 var fs = require('fs');
 var cwd = process.cwd();
+var templates = require('./templates');
+var exportModuleTemplate = templates.getTemplate('export-module.hbs');
 
 exports.bundleFor = function(builder, packageName) {
     var extVersionMetadata = dependencies.externalizedVersionMetadata(packageName);
@@ -41,13 +43,11 @@ function generateBundleSrc(extVersionMetadata) {
     srcContent += "// NOTE: This file is generated and should NOT be added to source control.\n";
     srcContent += "//\n";
     srcContent += "\n";
-    // Export for each compatible version scope of the installed package,
-    // allowing it to be shared where compatible and so avoiding loading of
-    // multiple versions of the same lib where possible.
-    srcContent += "require('@jenkins-cd/js-modules').export('" + normalizedPackageName + "', '" + jsModuleNames.patch + "', require('" + packageName + "'));\n";
-    srcContent += "require('@jenkins-cd/js-modules').export('" + normalizedPackageName + "', '" + jsModuleNames.minor + "', require('" + packageName + "'));\n";
-    srcContent += "require('@jenkins-cd/js-modules').export('" + normalizedPackageName + "', '" + jsModuleNames.major + "', require('" + packageName + "'));\n";
-    srcContent += "require('@jenkins-cd/js-modules').export('" + normalizedPackageName + "', '" + jsModuleNames.any + "', require('" + packageName + "'));\n";
+    srcContent += exportModuleTemplate({
+        packageName: packageName,
+        normalizedPackageName: normalizedPackageName,
+        jsModuleNames: jsModuleNames
+    });
     
     var bundleSrcDir = 'target/js-bundle-src';
     
