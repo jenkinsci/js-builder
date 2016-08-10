@@ -284,7 +284,8 @@ function addModuleMappingTransforms(bundle, bundler) {
                             module: exportModule
                         };
                     }
-                    content += "\n\n";
+
+                    templateParams.dependencyExports = expandDependencyExports(bundle.moduleExports);
 
                     // perform addModuleCSSToPage actions for mappings that requested it.
                     // We don't need the imports to complete before adding these. We can just add
@@ -320,6 +321,20 @@ function addModuleMappingTransforms(bundle, bundler) {
         this.push(row);
         next();
     }));
+}
+
+function expandDependencyExports(bundleExports) {
+    if (!bundleExports || bundleExports.length === 0) {
+        return undefined;
+    }
+
+    var dependencyExports = [];
+    for (var i in bundleExports) {
+        var packageName = bundleExports[i];
+        dependencyExports.push(dependencies.externalizedVersionMetadata(packageName));
+    }
+
+    return dependencyExports;
 }
 
 function setAdjunctInDir(bundle) {
