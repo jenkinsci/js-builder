@@ -5,6 +5,7 @@ var jasmineReporters = require('jasmine-reporters');
 var browserify = require('browserify');
 var _string = require('underscore.string');
 var fs = require('fs');
+var cwd = process.cwd();
 var args = require('./internal/args');
 var logger = require('./internal/logger');
 var notifier = require('./internal/notifier');
@@ -15,8 +16,7 @@ var bundlegen = require('./internal/bundlegen');
 var testWebServer;
 var skipBundle = skipBundle();
 var skipTest = (args.isArgvSpecified('--skipTest') || args.isArgvSpecified('--skipTests'));
-
-var cwd = process.cwd();
+var packageJson = require(cwd + '/package.json');
 
 var bundles = []; // see exports.bundle function
 var bundleDependencyTaskNames = ['log-env'];
@@ -221,8 +221,13 @@ exports.onTaskEnd = function(taskName, callback) {
 exports.import = function(module, to, config) {
     var moduleMapping = toModuleMapping(module, to, config);
     if (moduleMapping) {
-        bundlegen.addGlobalModuleMapping(moduleMapping);
+        bundlegen.addGlobalImportMapping(moduleMapping);
     }
+    return exports;
+};
+
+exports.export = function(module) {
+    bundlegen.addGlobalExportMapping(module);
     return exports;
 };
 
@@ -250,9 +255,6 @@ function normalizePath(path) {
     path = _string.rtrim(path, '/');
 
     return path;
-}
-function packageToPath(packageName) {
-    return _string.replaceAll(packageName, '\\.', '/');
 }
 
 exports.bundle = function(resource, as) {
@@ -293,6 +295,7 @@ function bundleJs(moduleToBundle, as) {
     bundle.bundleModule = moduleToBundle;
     bundle.bundleOutputFile = bundle.as + '.js';
     bundle.moduleMappings = [];
+    bundle.moduleExports = [];
     bundle.exportEmptyModule = true;
     bundle.useGlobalModuleMappings = true;
     bundle.minifyBundle = args.isArgvSpecified('--minify');
@@ -390,26 +393,45 @@ function bundleJs(moduleToBundle, as) {
         bundle.bundleExportNamespace = toNamespace;
         return bundle;
     };
-    bundle.export = function(toNamespace) {
+    bundle.export = function(moduleName) {
         if (skipBundle) {
             return bundle;
         }
         dependencies.assertHasJenkinsJsModulesDependency('Cannot bundle "export".');
-        if (toNamespace) {
-            bundle.bundleExport = true;
-            bundle.bundleExportNamespace = toNamespace;
-        } else if (maven.isMavenProject) {
-            bundle.bundleExport = true;
-            // Use the maven artifactId as the namespace.
-            bundle.bundleExportNamespace = maven.getArtifactId();
-            if (!maven.isHPI()) {
-                logger.logWarn("\t- Bundling process will use the maven pom artifactId ('" + bundle.bundleExportNamespace + "') as the bundle export namespace. You can specify a namespace as a parameter to the 'export' method call.");
+
+        if (moduleName) {
+            if (moduleName === packageJson.name) {
+                // We are exporting the top/entry level module of the generated bundle.
+                // This is the "traditional" export use case.
+                bundle.bundleExport = true;
+                bundle.bundleExportNamespace = packageJson.name;
+            } else if (dependencies.getDependency(moduleName) !== undefined) {
+                // We are exporting some dependency of this module Vs exporting
+                // the top/entry level module of the generated bundle. This allows the bundle
+                // to control loading of a specific dependency (or set of) and then share that with
+                // other bundles, which is needed where we have "singleton" type modules
+                // e.g. react and react-dom.
+                bundle.moduleExports.push(moduleName);
+            } else {
+                logger.logError("Error: Cannot export module '" + moduleName + "' - not the name of this module or one of it's dependencies.");
+                logger.logError("       (if '" + moduleName + "' is the namespace you want to export to, use the 'bundle.namespace' function)");
             }
         } else {
-            gutil.log(gutil.colors.red("Error: This is not a maven project. You must define a 'toNamespace' argument to the 'export' call."));
-            return;
+            if (bundle.bundleExportNamespace) {
+                bundle.bundleExport = true;
+            } else if (maven.isMavenProject) {
+                bundle.bundleExport = true;
+                // Use the maven artifactId as the namespace.
+                bundle.bundleExportNamespace = maven.getArtifactId();
+                if (!maven.isHPI()) {
+                    logger.logWarn("\t- Bundling process will use the maven pom artifactId ('" + bundle.bundleExportNamespace + "') as the bundle export namespace. You can specify a namespace as a parameter to the 'export' method call.");
+                }
+            } else {
+                logger.logError("Error: This is not a maven project. You must define a namespace via the 'namespace' function on the bundle.");
+                return;
+            }
+            logger.logInfo("\t- Bundle will be exported as '" + bundle.bundleExportNamespace + ":" + bundle.as + "'.");
         }
-        logger.logInfo("\t- Bundle will be exported as '" + bundle.bundleExportNamespace + ":" + bundle.as + "'.");
     };
 
     bundle.getModuleQName = function() {

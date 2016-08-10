@@ -15,7 +15,8 @@ var _string = require('underscore.string');
 
 var hasJenkinsJsModulesDependency = dependencies.hasJenkinsJsModulesDep();
 var preBundleListeners = [];
-var globalModuleMappings = [];
+var globalImportMappings = [];
+var globalExportMappings = [];
 
 /**
  * Add a listener to be called just before Browserify starts bundling.
@@ -29,8 +30,12 @@ exports.onPreBundle = function(listener) {
     preBundleListeners.push(listener);
 };
 
-exports.addGlobalModuleMapping = function(mapping) {
-    globalModuleMappings.push(mapping);
+exports.addGlobalImportMapping = function(mapping) {
+    globalImportMappings.push(mapping);
+};
+
+exports.addGlobalExportMapping = function(mapping) {
+    globalExportMappings.push(mapping);
 };
 
 exports.doJSBundle = function(bundle, applyImports) {
@@ -41,8 +46,11 @@ exports.doJSBundle = function(bundle, applyImports) {
 
     // Add all global mappings.
     if (bundle.useGlobalModuleMappings === true) {
-        for (var i = 0; i < globalModuleMappings.length; i++) {
-            bundle._import(globalModuleMappings[i]);
+        for (var i = 0; i < globalImportMappings.length; i++) {
+            bundle._import(globalImportMappings[i]);
+        }
+        for (var i = 0; i < globalExportMappings.length; i++) {
+            bundle.export(globalExportMappings[i]);
         }
     }
 

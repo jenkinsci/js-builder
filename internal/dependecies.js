@@ -70,10 +70,22 @@ exports.assertHasJenkinsJsModulesDependency = function(message) {
 
 exports.processExternalizedDependencies = function(builder) {
     if (packageJson.jenkinscd) {
-        var imports = (packageJson.jenkinscd.import || packageJson.jenkinscd.extDependencies);
+        var imports = packageJson.jenkinscd.import;
+
+        if (!imports && packageJson.jenkinscd.extDependencies) {
+            imports = packageJson.jenkinscd.extDependencies;
+            logger.logWarn('DEPRECATED use of jenkinscd.extDependencies in package.json. Change to jenkinscd.import.');
+        }
+
         if (imports) {
             for (var i = 0; i < imports.length; i++) {
                 builder.import(imports[i]);
+            }
+        }
+        var exports = packageJson.jenkinscd.export;
+        if (exports) {
+            for (var i = 0; i < exports.length; i++) {
+                builder.export(exports[i]);
             }
         }
     }
