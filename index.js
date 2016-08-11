@@ -510,8 +510,6 @@ function bundleJs(moduleToBundle, as) {
 
                 if (babelConfig) {
                     logger.logInfo("Using custom config from .babelrc");
-                    presets = babelConfig.presets || [];
-                    plugins = babelConfig.plugins || [];
                 }
                 else if (hasJSX) {
                     presets.push('react');
