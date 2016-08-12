@@ -501,15 +501,15 @@ function bundleJs(moduleToBundle, as) {
 
             var hasJSX = paths.hasSourceFiles('jsx');
             var hasES6 = paths.hasSourceFiles('es6');
-            var babelConfig = readBabelConfig();
+            var hasBabelRc = fs.existsSync('.babelrc');
 
-            if (langConfig.ecmaVersion === 6 || hasJSX || hasES6 || babelConfig) {
+            if (langConfig.ecmaVersion === 6 || hasJSX || hasES6 || hasBabelRc) {
                 var babelify = require('babelify');
                 var presets = [];
                 var plugins = [];
 
-                if (babelConfig) {
-                    logger.logInfo("Using custom config from .babelrc");
+                if (hasBabelRc) {
+                    logger.logInfo("Will use babel config from .babelrc");
                 }
                 else if (hasJSX) {
                     presets.push('react');
@@ -521,10 +521,16 @@ function bundleJs(moduleToBundle, as) {
                     dependencies.warnOnMissingDependency('babel-preset-es2015', 'You have ES6 sources in this project. Transpiling these will require the "babel-preset-es2015" package.');
                 }
 
-                bundler.transform(babelify, {
-                    presets: presets,
-                    plugins: plugins
-                });
+                var babelConfig = {};
+
+                // if no .babelrc was found, configure babel with the default presets and plugins from above
+                if (!hasBabelRc) {
+                    babelConfig.presets = presets;
+                    babelConfig.plugins = plugins;
+                }
+
+                // if .babelrc was found, an empty config object must be passed in order for .babelrc config to be read automatically
+                bundler.transform(babelify, babelConfig);
             }
 
             if (bundle.bundleTransforms) {
@@ -576,20 +582,6 @@ function bundleJs(moduleToBundle, as) {
     defineJSBundleTask(bundle, true);
 
     return bundle;
-}
-
-function readBabelConfig() {
-    if (fs.existsSync('.babelrc')) {
-        try {
-            var babelAsString = fs.readFileSync('.babelrc', {encoding: 'utf-8'});
-            return JSON.parse(babelAsString);
-        } catch (error) {
-            logger.logError("Error: could not read/parse .babelrc; file may be malformed.");
-            throw error;
-        }
-    }
-
-    return null;
 }
 
 function bundleCss(resource, format) {
