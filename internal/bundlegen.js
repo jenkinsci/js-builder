@@ -13,6 +13,7 @@ var source = require('vinyl-source-stream');
 var transformTools = require('browserify-transform-tools');
 var _string = require('underscore.string');
 var templates = require('./templates');
+var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var entryModuleTemplate = templates.getTemplate('entry-module.hbs');
 
 var hasJenkinsJsModulesDependency = dependencies.hasJenkinsJsModulesDep();
@@ -295,7 +296,7 @@ function addModuleMappingTransforms(bundle, bundler) {
                         var mapping = moduleMappings[i];
                         var addDefaultCSS = mapping.config.addDefaultCSS;
                         if (addDefaultCSS && addDefaultCSS === true) {
-                            var parsedModuleQName = jsmodules.parseResourceQName(mapping.to);
+                            var parsedModuleQName = new ModuleSpec(mapping.to);
                             templateParams.css.push(parsedModuleQName);
                         }
                     }

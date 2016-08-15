@@ -48,7 +48,7 @@ describe("index.js", function () {
             expect(browser.success).toBe(true);
             expect(jsLoads.length).toBe(2);
             expect(jsLoads[0]).toBe('http://localhost:18999/target/testmodule/testmodule_2.js');
-            expect(jsLoads[1]).toBe('http://localhost:18999/target/classes/org/jenkins/ui/jsmodules/underscore.string/underscore.string-3.3.4.js'); // loading of the dependency
+            expect(jsLoads[1]).toBe('http://localhost:18999/target/classes/org/jenkins/ui/jsmodules/underscore.string/underscore.string-3-3-4.js'); // loading of the dependency
 
             // Shouldn't be any css loaded
             browser.assert.elements('link', 0);
@@ -79,11 +79,11 @@ describe("index.js", function () {
             expect(browser.success).toBe(true);
             expect(jsLoads.length).toBe(2);
             expect(jsLoads[0]).toBe('http://localhost:18999/target/testmodule/testmodule_3.js');
-            expect(jsLoads[1]).toBe('http://localhost:18999/target/classes/org/jenkins/ui/jsmodules/underscore.string/underscore.string-3.3.4.js'); // loading of the dependency
+            expect(jsLoads[1]).toBe('http://localhost:18999/target/classes/org/jenkins/ui/jsmodules/underscore.string/underscore.string-3-3-4.js'); // loading of the dependency
 
             // Should be css on page
             browser.assert.elements('link', 1);
-            browser.assert.attribute('link', 'href', '/target/classes/org/jenkins/ui/jsmodules/underscore.string/underscore.string-3.3.4/style.css');
+            browser.assert.attribute('link', 'href', '/target/classes/org/jenkins/ui/jsmodules/underscore.string/underscore.string-3-3-4/style.css');
             
             // Make sure the bundle executed...
             expect(browser.window.testmoduleXYZ).toBe('Hello');

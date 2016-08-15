@@ -35,7 +35,7 @@ if (___$$$___requiredModuleMappings.length > 0) {
         {{/if}}
 
         {{#each css}}
-        ___$$$___jsModules.addModuleCSSToPage('{{namespace}}', '{{moduleName}}');
+        ___$$$___jsModules.addModuleCSSToPage('{{namespace}}', '{{getLoadBundleName}}');
         {{/each}}
     });
 } else {

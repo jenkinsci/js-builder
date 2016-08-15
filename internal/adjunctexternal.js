@@ -19,7 +19,7 @@ exports.bundleFor = function(builder, packageName) {
     var depVersion = extVersionMetadata.depVersion;
     var inDir = 'target/classes/org/jenkins/ui/jsmodules/' + normalizedPackageName;
     
-    if (!fs.existsSync(cwd + '/' + inDir + '/' + jsModuleNames.nameFor(depVersion) + '.js')) {
+    if (!fs.existsSync(cwd + '/' + inDir + '/' + jsModuleNames.filenameFor(depVersion) + '.js')) {
         // We need to generate an adjunct bundle for the package.
         var bundleSrc = generateBundleSrc(extVersionMetadata);
         builder.bundle(bundleSrc).inDir(inDir).namespace(normalizedPackageName).noEmptyModuleExport().ignoreGlobalModuleMappings();
@@ -53,7 +53,7 @@ function generateBundleSrc(extVersionMetadata) {
     
     paths.mkdirp(bundleSrcDir);
     
-    var bundleSrcFile = bundleSrcDir + '/' + jsModuleNames.nameFor(depVersion) + '.js';
+    var bundleSrcFile = bundleSrcDir + '/' + jsModuleNames.filenameFor(depVersion) + '.js';
     fs.writeFileSync(cwd +  '/' + bundleSrcFile, srcContent);
     return bundleSrcFile;
 }

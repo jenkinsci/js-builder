@@ -2,6 +2,7 @@ var fs = require('fs');
 var cwd = process.cwd();
 var packageJson = require(cwd + '/package.json');
 var logger = require('./logger');
+var Version = require('@jenkins-cd/js-modules/js/Version');
 
 exports.getDependency = function(depName) {
     function findDep(onDepMap) {
@@ -106,8 +107,8 @@ exports.externalizedVersionMetadata = function(depPackageName) {
     
     var metadata = {};
     metadata.packageName = depPackageName;
-    metadata.installedVersion = parseVersion(packageJson.version);
-    metadata.depVersion = parseVersion(exports.getDependency(depPackageName).version);
+    metadata.installedVersion = new Version(packageJson.version);
+    metadata.depVersion = new Version(exports.getDependency(depPackageName).version);
     metadata.normalizedPackageName = exports.normalizePackageName(depPackageName);
     metadata.jsModuleNames = mmpModuleNames(metadata.normalizedPackageName, metadata.installedVersion);
     metadata.importAs = function (scope) {
@@ -126,45 +127,6 @@ exports.externalizedVersionMetadata = function(depPackageName) {
     
     return metadata;
 };
-
-function parseVersion(version) {
-    function removeNonDigits(string) {
-        // remove anything that's not a digit, a dot or an x.
-        return string.replace(/[^\d.x]/g, '');
-    }
-    
-    var versionTokens = version.split('.');
-    var parsedVer = {};
-    
-    parsedVer.prerelease = undefined;
-
-    var patchAndPrerelease = '';
-    for (var i = 2; i < versionTokens.length; i++) {
-        if (patchAndPrerelease.length > 0) {
-            patchAndPrerelease += '.';
-        }
-        patchAndPrerelease += versionTokens[i];
-
-        var separatorIdx = patchAndPrerelease.indexOf('-');
-        if (separatorIdx !== -1) {
-            parsedVer.patch = removeNonDigits(patchAndPrerelease.substring(0, separatorIdx));
-            parsedVer.prerelease = patchAndPrerelease.substring(separatorIdx + 1);
-        } else {
-            parsedVer.patch = removeNonDigits(patchAndPrerelease);
-        }
-    }
-
-    if (versionTokens.length >= 2) {
-        parsedVer.minor = removeNonDigits(versionTokens[1]);
-    }
-    if (versionTokens.length >= 1) {
-        parsedVer.major = removeNonDigits(versionTokens[0]);
-    }
-    
-    return parsedVer;
-}
-
-exports.parseVersion = parseVersion;
 
 /**
  * Normalize an NPM package name by removing all non alpha numerics and replacing
@@ -188,10 +150,10 @@ exports.normalizePackageName = function(packageName) {
  */
 function mmpModuleNames(normalizedPackageName, fullVersion) {
     return {
-        any: normalizedPackageName,
-        major: normalizedPackageName + '-' + fullVersion.major + '.x',
-        minor: normalizedPackageName + '-' + fullVersion.major + '.' + fullVersion.minor + '.x',
-        patch: normalizedPackageName + '-' + fullVersion.major + '.' + fullVersion.minor + '.' + fullVersion.patch,
+        any: normalizedPackageName + '@any',
+        major: normalizedPackageName + '@' + fullVersion.major + '.x',
+        minor: normalizedPackageName + '@' + fullVersion.major + '.' + fullVersion.minor + '.x',
+        patch: normalizedPackageName + '@' + fullVersion.major + '.' + fullVersion.minor + '.' + fullVersion.patch,
         nameFor: function (depVersion) {
             if (depVersion.minor === 'x') {
                 return this.major;
@@ -199,6 +161,15 @@ function mmpModuleNames(normalizedPackageName, fullVersion) {
                 return this.minor;
             } else {
                 return this.patch;
+            }
+        },
+        filenameFor: function (depVersion) {
+            if (depVersion.minor === 'x') {
+                return normalizedPackageName + '-' + fullVersion.major + '-x';
+            } else if (depVersion.patch === 'x') {
+                return normalizedPackageName + '-' + fullVersion.major + '-' + fullVersion.minor + '-x';
+            } else {
+                return normalizedPackageName + '-' + fullVersion.major + '-' + fullVersion.minor + '-' + fullVersion.patch;
             }
         }
     };

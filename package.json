@@ -30,6 +30,7 @@
     "browserify": "^12.0.1",
     "browserify-transform-tools": "^1.4.2",
     "eslint": "^2.2.0",
+    "handlebars": "^3.0.3",
     "glob": "^7.0.0",
     "gulp": "^3.9.0",
     "gulp-eslint": "^2.0.0",
@@ -51,12 +52,11 @@
     "xml2js": "^0.4.9"
   },
   "devDependencies": {
-    "@jenkins-cd/js-modules": "0.0.6-beta1",
-    "handlebars": "^3.0.3",
+    "@jenkins-cd/js-modules": "0.0.6-beta5",
     "zombie": "^4.2.1"
   },
   "peerDependencies": {
     "window-handle": "1.0.0",
-    "@jenkins-cd/js-modules": "0.0.6-beta1"
+    "@jenkins-cd/js-modules": "0.0.6-beta5"
   }
 }
