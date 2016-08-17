@@ -48,13 +48,14 @@ exports.doJSBundle = function(bundle, applyImports) {
     }
 
     // Add all global mappings.
-    if (bundle.useGlobalModuleMappings === true) {
+    if (bundle.useGlobalModuleMappings === true && !bundle.globalModuleMappingsApplied) {
         for (var i = 0; i < globalImportMappings.length; i++) {
             bundle._import(globalImportMappings[i]);
         }
         for (var i = 0; i < globalExportMappings.length; i++) {
             bundle.export(globalExportMappings[i]);
         }
+        bundle.globalModuleMappingsApplied = true;
     }
 
     var bundleTo = bundle.bundleInDir;
@@ -147,7 +148,7 @@ exports.doJSBundle = function(bundle, applyImports) {
         .on('error', function (err) {
             logger.logError('Browserify bundle processing error');
             if (err) {
-                logger.logError('\terror: ' + err);
+                logger.logError('\terror: ' + err.stack);
             }
             if (main.isRebundle() || main.isRetest()) {
                 notifier.notify('bundle:watch failure', 'See console for details.');
@@ -234,11 +235,12 @@ function addModuleMappingTransforms(bundle, bundler) {
                 var required = args[0];
                 for (var i = 0; i < moduleMappings.length; i++) {
                     var mapping = moduleMappings[i];
-                    if (mapping.from === required) {
-                        if (requiredModuleMappings.indexOf(mapping.to) === -1) {
-                            requiredModuleMappings.push(mapping.to);
+                    if (mapping.fromSpec.moduleName === required) {
+                        var toSpec = new ModuleSpec(mapping.to);
+                        var importAs = toSpec.importAs();
+                        if (requiredModuleMappings.indexOf(importAs) === -1) {
+                            requiredModuleMappings.push(importAs);
                         }
-                        return cb();
                     }
                 }
                 return cb();
@@ -291,7 +293,6 @@ function addModuleMappingTransforms(bundle, bundler) {
                     // perform addModuleCSSToPage actions for mappings that requested it.
                     // We don't need the imports to complete before adding these. We can just add
                     // them immediately.
-                    var jsmodules = require('@jenkins-cd/js-modules/js/internal');
                     for (var i = 0; i < moduleMappings.length; i++) {
                         var mapping = moduleMappings[i];
                         var addDefaultCSS = mapping.config.addDefaultCSS;

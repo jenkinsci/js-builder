@@ -3,12 +3,20 @@ var dependencies = require('./dependecies');
 var logger = require('./logger');
 var paths = require('./paths');
 var fs = require('fs');
+var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var cwd = process.cwd();
 var templates = require('./templates');
 var exportModuleTemplate = templates.getTemplate('export-module.hbs');
 
 exports.bundleFor = function(builder, packageName) {
-    var extVersionMetadata = dependencies.externalizedVersionMetadata(packageName);
+    var packageSpec = new ModuleSpec(packageName);
+
+    if (!packageSpec.getLoadBundleFileNamePrefix()) {
+        logger.logInfo('Not create Jenkins adjunct based external module bundle for package "' + packageName + '". Is using a non-specific version name.');
+        return undefined;
+    }
+
+    var extVersionMetadata = dependencies.externalizedVersionMetadata(packageSpec.moduleName);
     
     if (!extVersionMetadata) {
         throw new Error('Unable to create Jenkins adjunct based external module bundle for package "' + packageName + '". This package is not installed.');

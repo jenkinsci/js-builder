@@ -13,6 +13,7 @@ var paths = require('./internal/paths');
 var dependencies = require('./internal/dependecies');
 var maven = require('./internal/maven');
 var bundlegen = require('./internal/bundlegen');
+var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var testWebServer;
 var skipBundle = skipBundle();
 var skipTest = (args.isArgvSpecified('--skipTest') || args.isArgvSpecified('--skipTests'));
@@ -129,7 +130,7 @@ exports.defineTasks = function(tasknames) {
         var gulpTask = tasks[taskname];
 
         if (!gulpTask) {
-            throw "Unknown gulp task '" + taskname + "'.";
+            throw new Error("Unknown gulp task '" + taskname + "'.");
         }
 
         exports.defineTask(taskname, gulpTask);
@@ -270,7 +271,7 @@ exports.bundle = function(resource, as) {
 function bundleJs(moduleToBundle, as) {
     if (!moduleToBundle) {
         gutil.log(gutil.colors.red("Error: Invalid bundle registration for module 'moduleToBundle' must be specify."));
-        throw "'bundle' registration failed. See error above.";
+        throw new Error("'bundle' registration failed. See error above.");
     }
 
     var bundle = {};
@@ -288,7 +289,7 @@ function bundleJs(moduleToBundle, as) {
     function assertBundleOutputUndefined() {
         if (bundle.bundleInDir) {
             gutil.log(gutil.colors.red("Error: Invalid bundle registration. Bundle output (inDir) already defined."));
-            throw "'bundle' registration failed. See error above.";
+            throw new Error("'bundle' registration failed. See error above.");
         }
     }
 
@@ -321,7 +322,7 @@ function bundleJs(moduleToBundle, as) {
         }
         if (!dir) {
             gutil.log(gutil.colors.red("Error: Invalid bundle registration for module '" + moduleToBundle + "'. You can't specify a 'null' dir name when calling inDir."));
-            throw "'bundle' registration failed. See error above.";
+            throw new Error("'bundle' registration failed. See error above.");
         }
         assertBundleOutputUndefined();
         bundle.bundleInDir = normalizePath(dir);
@@ -364,7 +365,11 @@ function bundleJs(moduleToBundle, as) {
             }
         }
 
-        bundle.moduleMappings.push(moduleMapping);
+        if (moduleMapping.fromSpec) {
+            bundle.moduleMappings.push(moduleMapping);
+        } else {
+            bundle.moduleMappings.push(toModuleMapping(moduleMapping.from, moduleMapping.to, moduleMapping.config));
+        }
         return bundle;
     };
     
@@ -638,7 +643,7 @@ function bundleCss(resource, format) {
         }
         if (!dir) {
             logger.logError("Error: Invalid bundle registration for CSS resource '" + resource + "'. You can't specify a 'null' dir name when calling inDir.");
-            throw "'bundle' registration failed. See error above.";
+            throw new Error("'bundle' registration failed. See error above.");
         }
         bundle.bundleInDir = normalizePath(dir);
         return bundle;
@@ -653,7 +658,7 @@ function bundleCss(resource, format) {
 }
 
 function toModuleMapping(from, to, config) {
-    dependencies.assertHasJenkinsJsModulesDependency('Cannot bundle "withExternalModuleMapping".');
+    dependencies.assertHasJenkinsJsModulesDependency('Cannot process bundle "import".');
     
     // 'to' is optional, so maybe the second arg is a 
     // config object. 
@@ -676,13 +681,20 @@ function toModuleMapping(from, to, config) {
     }
 
     if (!from) {
-        var message = "Cannot call 'withExternalModuleMapping' without defining the 'from' module name.";
+        var message = "Cannot call 'import' without defining the 'from' module name.";
         logger.logError(message);
-        throw message;
+        throw new Error(message);
     }
+
+    var fromSpec = new ModuleSpec(from);
+
     if (!to) {
         var adjExt = require('./internal/adjunctexternal');
         to = adjExt.bundleFor(exports, from);
+        // If still nothing, use a qualified version of the from
+        if (!to) {
+            to = fromSpec.importAs();
+        }
     }
 
     // special case because we are externalizing handlebars runtime for handlebarsify.
@@ -692,6 +704,7 @@ function toModuleMapping(from, to, config) {
 
     return {
         from: from,
+        fromSpec: fromSpec,
         to: to,
         config: config
     };

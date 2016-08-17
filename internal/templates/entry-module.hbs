@@ -1,6 +1,6 @@
 var ___$$$___jsModules = require('@jenkins-cd/js-modules');
 
-___$$$___jsModules.whoami('{{bundle.bundleExportNamespace}}:{{bundle.as}}');
+___$$$___jsModules.whoami('{{#if bundle.bundleExportNamespace}}{{bundle.bundleExportNamespace}}:{{/if}}{{bundle.as}}');
 
 /*** Start Module Exec Function ***************************************/
 function ___$$$___exec() {

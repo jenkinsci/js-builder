@@ -7,7 +7,7 @@ builder.src(['./internal', './js']);
 
 // Create a mock bundle for abcxyz:abcxyzV2. We then use
 // this for testing the global withExternalModuleMapping
-builder.bundle('spec/abcxyzV2.js').export('abcxyz');
+builder.bundle('spec/abcxyzV2.js').namespace('abcxyz');
 
 builder.import('abcxyz', 'abcxyz:abcxyzV2');
 
