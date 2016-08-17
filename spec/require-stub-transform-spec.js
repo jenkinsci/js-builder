@@ -166,15 +166,8 @@ function logMetadata(metadata) {
         if (moduleDefs.hasOwnProperty(packId)) {
             var moduleDef = moduleDefs[packId];
 
-            // truncate the source so as to make the log readable...
-            var packEntry = moduleDef.packEntry;
-            try {
-                moduleDef.packEntry = '<hidden>';
-                console.log(moduleDef);
-                console.log('');
-            } finally {
-                moduleDef.packEntry = packEntry;
-            }
+            console.log(moduleDef);
+            console.log('');
         }
     }
 }

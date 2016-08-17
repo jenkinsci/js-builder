@@ -28,6 +28,22 @@ function pipelingPlugin(moduleMappings) {
 
 function updateBundleStubs(packEntries, moduleMappings) {
     var modulesDefs = extractModuleDefs(packEntries);
+    var metadata = {
+        packEntries: packEntries,
+        modulesDefs: modulesDefs,
+        getPackEntryById: function(id) {
+            return getPackEntryById(this.packEntries, id);
+        },
+        getPackEntriesByName: function(name) {
+            return getPackEntriesByName(this, name);
+        },
+        getModuleDefById: function(id) {
+            return modulesDefs[id];
+        },
+        getModuleDefByName: function(name) {
+            return modulesDefs[name];
+        }
+    };
 
     // We could remove unused modules from the packEntries at this point i.e. modules
     // that did not make an entry in modulesDefs are modules that nothing depends on.
@@ -36,10 +52,10 @@ function updateBundleStubs(packEntries, moduleMappings) {
     // talking about the entry module, which would often not have anything depending
     // on it.
 
-    addDependantsToDefs(packEntries, modulesDefs);
-    addDependanciesToDefs(packEntries, modulesDefs);
+    addDependantsToDefs(metadata);
+    addDependanciesToDefs(metadata);
 
-    var jsModulesModuleDef = getPackEntriesByName(modulesDefs, '@jenkins-cd/js-modules');
+    var jsModulesModuleDef = metadata.getPackEntriesByName('@jenkins-cd/js-modules');
 
     if (jsModulesModuleDef.length === 0) {
         // If @jenkins-cd/js-modules is not present in the pack, then
@@ -55,10 +71,10 @@ function updateBundleStubs(packEntries, moduleMappings) {
             }
 
             var moduleName = moduleMapping.fromSpec.moduleName;
-            var packEntries = getPackEntriesByName(modulesDefs, moduleName);
-            if (packEntries.length === 1) {
-                var packEntry = packEntries[0];
-                var moduleDef = modulesDefs[packEntry.id];
+            var mappedPackEntries = metadata.getPackEntriesByName(moduleName);
+            if (mappedPackEntries.length === 1) {
+                var packEntry = mappedPackEntries[0];
+                var moduleDef = metadata.modulesDefs[packEntry.id];
 
                 if (moduleDef) {
                     var toSpec = new ModuleSpec(moduleMapping.to);
@@ -71,9 +87,9 @@ function updateBundleStubs(packEntries, moduleMappings) {
 
                     // Go to all of the dependencies and remove this module from
                     // it's list of dependants.
-                    removeDependant(moduleDef, modulesDefs, packEntries);
+                    removeDependant(moduleDef, metadata);
                 }
-            } else if (packEntries.length > 1) {
+            } else if (mappedPackEntries.length > 1) {
                 logger.logWarn('Cannot map module "' + moduleName + '". Multiple bundle map entries are known by this name (in different contexts).');
             } else {
                 // This can happen if the pack with that ID was already removed
@@ -86,28 +102,13 @@ function updateBundleStubs(packEntries, moduleMappings) {
     // Keeping as it's handy for debug purposes.
     //require('fs').writeFileSync('./target/bundlepack.json', JSON.stringify(packEntries, undefined, 4));
 
-    return {
-        packEntries: packEntries,
-        modulesDefs: modulesDefs,
-        getPackEntryById: function(id) {
-            return getPackEntryById(packEntries, id);
-        },
-        getPackEntriesByName: function(name) {
-            return getPackEntriesByName(modulesDefs, name);
-        },
-        getModuleDefById: function(id) {
-            return modulesDefs[id];
-        },
-        getModuleDefByName: function(name) {
-            return modulesDefs[name];
-        }
-    };
+    return metadata;
 }
 
-function removeDependant(moduleDefToRemove, modulesDefs, packEntries) {
-    for (var packId in modulesDefs) {
-        if (modulesDefs.hasOwnProperty(packId)) {
-            var moduleDef = modulesDefs[packId];
+function removeDependant(moduleDefToRemove, metadata) {
+    for (var packId in metadata.modulesDefs) {
+        if (metadata.modulesDefs.hasOwnProperty(packId)) {
+            var moduleDef = metadata.modulesDefs[packId];
             if (moduleDef && moduleDef !== moduleDefToRemove) {
                 var dependantEntryIndex = moduleDef.dependants.indexOf(moduleDefToRemove.id);
                 if (dependantEntryIndex !== -1) {
@@ -119,9 +120,8 @@ function removeDependant(moduleDefToRemove, modulesDefs, packEntries) {
                         // modules in the bundle. Therefore, there's a potential cascading effect that
                         // prunes the bundle of modules that are no longer in use as a result of
                         // mapping/stubbing modules.
-                        removePackEntryById(packEntries, moduleDef.id);
-                        removeDependant(moduleDef, modulesDefs, packEntries);
-                        delete moduleDef.packEntry;
+                        removePackEntryById(metadata, moduleDef.id);
+                        removeDependant(moduleDef, metadata);
                     }
                 }
             }
@@ -143,7 +143,6 @@ function extractModuleDefs(packEntries) {
                     var depPackEntry = getPackEntryById(packEntries, depPackId);
                     moduleDef = {
                         id: depPackId,
-                        packEntry: depPackEntry,
                         knownAs: [],
                         isKnownAs: function(name) {
                             // Note that we need to be very careful about how we
@@ -167,14 +166,14 @@ function extractModuleDefs(packEntries) {
     return modulesDefs;
 }
 
-function addDependantsToDefs(packEntries, modulesDefs) {
-    for (var i in packEntries) {
-        var packEntry = packEntries[i];
+function addDependantsToDefs(metadata) {
+    for (var i in metadata.packEntries) {
+        var packEntry = metadata.packEntries[i];
 
         for (var module in packEntry.deps) {
             if (packEntry.deps.hasOwnProperty(module)) {
                 var entryDepId = packEntry.deps[module];
-                var moduleDef = modulesDefs[entryDepId];
+                var moduleDef = metadata.modulesDefs[entryDepId];
                 if (moduleDef.dependants.indexOf(packEntry.id) === -1) {
                     moduleDef.dependants.push(packEntry.id);
                 }
@@ -183,10 +182,10 @@ function addDependantsToDefs(packEntries, modulesDefs) {
     }
 }
 
-function addDependanciesToDefs(packEntries, modulesDefs) {
-    for (var i in packEntries) {
-        var packEntry = packEntries[i];
-        var moduleDef = modulesDefs[packEntry.id];
+function addDependanciesToDefs(metadata) {
+    for (var i in metadata.packEntries) {
+        var packEntry = metadata.packEntries[i];
+        var moduleDef = metadata.modulesDefs[packEntry.id];
 
         if (!moduleDef) {
             // This is only expected if it's the entry module.
@@ -210,21 +209,24 @@ function addDependanciesToDefs(packEntries, modulesDefs) {
 
 function getPackEntryById(packEntries, id) {
     for (var i in packEntries) {
-        if (packEntries[i].id === id) {
+        if (packEntries[i].id.toString() === id.toString()) {
             return packEntries[i];
         }
     }
     return undefined;
 }
 
-function getPackEntriesByName(modulesDefs, name) {
+function getPackEntriesByName(metadata, name) {
     var packEntries = [];
 
-    for (var packId in modulesDefs) {
-        if (modulesDefs.hasOwnProperty(packId)) {
-            var modulesDef = modulesDefs[packId];
-            if (modulesDef.isKnownAs(name) && modulesDef.packEntry) {
-                packEntries.push(modulesDef.packEntry);
+    for (var packId in metadata.modulesDefs) {
+        if (metadata.modulesDefs.hasOwnProperty(packId)) {
+            var modulesDef = metadata.modulesDefs[packId];
+            if (modulesDef.isKnownAs(name)) {
+                var packEntry = metadata.getPackEntryById(packId);
+                if (packEntry) {
+                    packEntries.push(packEntry);
+                }
             }
         }
     }
@@ -232,13 +234,31 @@ function getPackEntriesByName(modulesDefs, name) {
     return packEntries;
 }
 
-function removePackEntryById(packEntries, id) {
-    for (var i in packEntries) {
-        if (packEntries[i].id === id) {
-            packEntries.splice(i, 1);
-            return
+function removePackEntryById(metadata, id) {
+    for (var i in metadata.packEntries) {
+        if (metadata.packEntries[i].id.toString() === id.toString()) {
+            metadata.packEntries.splice(i, 1);
+            return;
         }
     }
+}
+
+function listAllModuleNames(modulesDefs) {
+    var names = [];
+
+    for (var packId in modulesDefs) {
+        if (modulesDefs.hasOwnProperty(packId)) {
+            var modulesDef = modulesDefs[packId];
+            for (var nameIdx in modulesDef.knownAs) {
+                var name = modulesDef.knownAs[nameIdx];
+                if (names.indexOf(name) === -1) {
+                    names.push(name);
+                }
+            }
+        }
+    }
+
+    return names;
 }
 
 exports.pipelinePlugin = pipelingPlugin;
