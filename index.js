@@ -286,6 +286,10 @@ function bundleJs(moduleToBundle, as) {
         bundle.as = _string.strLeftBack(as, '.js');
     }
 
+    bundle.asModuleSpec = new ModuleSpec(bundle.as);
+    bundle.as = bundle.asModuleSpec.getLoadBundleFileNamePrefix();
+    bundle.bundleExportNamespace = bundle.asModuleSpec.namespace;
+
     function assertBundleOutputUndefined() {
         if (bundle.bundleInDir) {
             gutil.log(gutil.colors.red("Error: Invalid bundle registration. Bundle output (inDir) already defined."));
@@ -298,7 +302,8 @@ function bundleJs(moduleToBundle, as) {
     bundle.moduleMappings = [];
     bundle.moduleExports = [];
     bundle.exportEmptyModule = true;
-    bundle.useGlobalModuleMappings = true;
+    bundle.useGlobalImportMappings = true;
+    bundle.useGlobalExportMappings = true;
     bundle.minifyBundle = args.isArgvSpecified('--minify');
     bundle.generateNoImportsBundle = function() {
         if (skipBundle) {
@@ -339,8 +344,18 @@ function bundleJs(moduleToBundle, as) {
         return bundle;
     };
     
+    bundle.ignoreGlobalImportMappings = function() {
+        bundle.useGlobalImportMappings = false;
+        return bundle;
+    };
+
     bundle.ignoreGlobalModuleMappings = function() {
-        bundle.useGlobalModuleMappings = false;
+        logger.logWarn('DEPRECATED use of bundle.ignoreGlobalModuleMappings function. Change to bundle.ignoreGlobalImportMappings.');
+        return bundle.ignoreGlobalImportMappings();
+    };
+
+    bundle.ignoreGlobalExportMappings = function() {
+        bundle.useGlobalExportMappings = false;
         return bundle;
     };
     
@@ -353,7 +368,9 @@ function bundleJs(moduleToBundle, as) {
         if (skipBundle) {
             return bundle;
         }
-        if (moduleMapping.to === bundle.getModuleQName()) {
+
+        var toSpec = new ModuleSpec(moduleMapping.to);
+        if (toSpec.importAs() === bundle.importAs()) {
             // Do not add mappings to itself.
             return bundle;
         }
@@ -439,11 +456,12 @@ function bundleJs(moduleToBundle, as) {
         }
     };
 
-    bundle.getModuleQName = function() {
-        if (bundle.bundleExportNamespace) {
-            return bundle.bundleExportNamespace + ':' + bundle.as;
+    bundle.importAs = function() {
+        if (bundle.bundleExportNamespace && bundle.bundleExportNamespace !== bundle.asModuleSpec.namespace) {
+            var modifiedSpec = new ModuleSpec(bundle.bundleExportNamespace + ':' + bundle.asModuleSpec.getLoadBundleName());
+            return modifiedSpec.importAs();
         } else {
-            return 'undefined:' + bundle.as;
+            return bundle.asModuleSpec.importAs();
         }
     };
 

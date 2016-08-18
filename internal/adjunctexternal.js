@@ -30,7 +30,10 @@ exports.bundleFor = function(builder, packageName) {
     if (!fs.existsSync(cwd + '/' + inDir + '/' + jsModuleNames.filenameFor(depVersion) + '.js')) {
         // We need to generate an adjunct bundle for the package.
         var bundleSrc = generateBundleSrc(extVersionMetadata);
-        builder.bundle(bundleSrc).inDir(inDir).namespace(normalizedPackageName).noEmptyModuleExport().ignoreGlobalModuleMappings();
+        builder.bundle(bundleSrc, packageName + '@' + depVersion.raw)
+            .inDir(inDir)
+            .ignoreGlobalExportMappings()
+            .noEmptyModuleExport();
     } else {
         // The bundle has already been generated. No need to do it again.
         // For linked modules ... do an rm -rf of the target dir ... sorry :)

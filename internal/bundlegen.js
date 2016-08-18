@@ -48,12 +48,16 @@ exports.doJSBundle = function(bundle, applyImports) {
     }
 
     // Add all global mappings.
-    if (bundle.useGlobalModuleMappings === true && !bundle.globalModuleMappingsApplied) {
-        for (var i = 0; i < globalImportMappings.length; i++) {
-            bundle._import(globalImportMappings[i]);
+    if (!bundle.globalModuleMappingsApplied) {
+        if (bundle.useGlobalImportMappings === true) {
+            for (var i = 0; i < globalImportMappings.length; i++) {
+                bundle._import(globalImportMappings[i]);
+            }
         }
-        for (var i = 0; i < globalExportMappings.length; i++) {
-            bundle.export(globalExportMappings[i]);
+        if (bundle.useGlobalExportMappings === true) {
+            for (var i = 0; i < globalExportMappings.length; i++) {
+                bundle.export(globalExportMappings[i]);
+            }
         }
         bundle.globalModuleMappingsApplied = true;
     }
