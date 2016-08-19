@@ -124,11 +124,17 @@ exports.doJSBundle = function(bundle, applyImports) {
 
     var hasJSX = paths.hasSourceFiles('jsx');
     var hasES6 = paths.hasSourceFiles('es6');
-    if (langConfig.ecmaVersion === 6 || hasJSX || hasES6) {
+    var hasBabelRc = fs.existsSync('.babelrc');
+
+    if (langConfig.ecmaVersion === 6 || hasJSX || hasES6 || hasBabelRc) {
         var babelify = require('babelify');
         var presets = [];
+        var plugins = [];
 
-        if (hasJSX) {
+        if (hasBabelRc) {
+            logger.logInfo("Will use babel config from .babelrc");
+        }
+        else if (hasJSX) {
             presets.push('react');
             dependencies.warnOnMissingDependency('babel-preset-react', 'You have JSX sources in this project. Transpiling these will require the "babel-preset-react" package.');
             presets.push('es2015');
@@ -138,7 +144,16 @@ exports.doJSBundle = function(bundle, applyImports) {
             dependencies.warnOnMissingDependency('babel-preset-es2015', 'You have ES6 sources in this project. Transpiling these will require the "babel-preset-es2015" package.');
         }
 
-        bundler.transform(babelify, {presets: presets});
+        var babelConfig = {};
+
+        // if no .babelrc was found, configure babel with the default presets and plugins from above
+        if (!hasBabelRc) {
+            babelConfig.presets = presets;
+            babelConfig.plugins = plugins;
+        }
+
+        // if .babelrc was found, an empty config object must be passed in order for .babelrc config to be read automatically
+        bundler.transform(babelify, babelConfig);
     }
 
     if (bundle.bundleTransforms) {
