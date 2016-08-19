@@ -8,36 +8,44 @@ function ___$$$___exec() {
 }
 /*** End Module Exec Function   ***************************************/
 
+function ___$$$___doExports() {
+    // Do exports, if any ....
+    {{#if entryExport}}___$$$___jsModules.export({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
+
+    {{#if dependencyExports}}
+        function doDependencyExport(module, normalizedPackageName, jsModuleNames) {
+            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.patch, module);
+            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.minor, module);
+            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.major, module);
+            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.any, module);
+        }
+
+        {{#each dependencyExports}}
+        doDependencyExport(require('{{packageName}}'), '{{normalizedPackageName}}', {
+            patch: '{{jsModuleNames.patch}}',
+            minor: '{{jsModuleNames.minor}}',
+            major: '{{jsModuleNames.major}}',
+            any: '{{jsModuleNames.any}}'
+        });
+        {{/each}}
+    {{/if}}
+}
+
+function ___$$$___doCSS() {
+    {{#each css}}
+    ___$$$___jsModules.addModuleCSSToPage('{{namespace}}', '{{getLoadBundleName}}');
+    {{/each}}
+}
+
 if (___$$$___requiredModuleMappings.length > 0) {
     ___$$$___jsModules.import.apply(___$$$___jsModules.import, ___$$$___requiredModuleMappings)
         .onFulfilled(function() {
         ___$$$___exec();
-
-        // Do exports, if any ....
-        {{#if entryExport}}___$$$___jsModules.export({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
-
-        {{#if dependencyExports}}
-            function doDependencyExport(module, normalizedPackageName, jsModuleNames) {
-                ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.patch, module);
-                ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.minor, module);
-                ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.major, module);
-                ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.any, module);
-            }
-
-            {{#each dependencyExports}}
-            doDependencyExport(require('{{packageName}}'), '{{normalizedPackageName}}', {
-                patch: '{{jsModuleNames.patch}}',
-                minor: '{{jsModuleNames.minor}}',
-                major: '{{jsModuleNames.major}}',
-                any: '{{jsModuleNames.any}}'
-            });
-            {{/each}}
-        {{/if}}
-
-        {{#each css}}
-        ___$$$___jsModules.addModuleCSSToPage('{{namespace}}', '{{getLoadBundleName}}');
-        {{/each}}
+        ___$$$___doExports();
+        ___$$$___doCSS();
     });
 } else {
     ___$$$___exec();
+    ___$$$___doExports();
+    ___$$$___doCSS();
 }
