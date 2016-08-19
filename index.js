@@ -66,6 +66,10 @@ exports.isRetest = function() {
     return retestRunning;
 };
 
+exports.bundleCount = function() {
+    return bundles.length;
+};
+
 /**
  * Set the JavaScript language configuration.
  */

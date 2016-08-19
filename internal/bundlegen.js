@@ -68,8 +68,13 @@ exports.doJSBundle = function(bundle, applyImports) {
             }
         }
         if (bundle.useGlobalExportMappings === true) {
-            for (var i = 0; i < globalExportMappings.length; i++) {
-                bundle.export(globalExportMappings[i]);
+            if (main.bundleCount() > 1 && globalExportMappings.length > 0) {
+                logger.logError('Unable to apply bundle dependency "export" configurations from package.json because there are multiple bundles being generated.');
+                logger.logError('   (a given module/package export should only ever be done from one bundle i.e. cannot be done from multiple)');
+            } else {
+                for (var i = 0; i < globalExportMappings.length; i++) {
+                    bundle.export(globalExportMappings[i]);
+                }
             }
         }
         bundle.globalModuleMappingsApplied = true;
