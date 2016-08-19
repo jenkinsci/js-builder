@@ -250,6 +250,19 @@ exports.onPreBundle = function(listener) {
     return exports;
 };
 
+/**
+ * Add a listener to be called just after Browserify finishes bundling.
+ * <p>
+ * The listener is called with the {@code bundle} as {@code this} and
+ * the location of the generated bundle as as the only arg.
+ *
+ * @param listener The listener to add.
+ */
+exports.onPostBundle = function(listener) {
+    bundlegen.onPostBundle(listener);
+    return exports;
+};
+
 function normalizePath(path) {
     path = _string.ltrim(path, './');
     path = _string.ltrim(path, '/');
@@ -287,7 +300,10 @@ function bundleJs(moduleToBundle, as) {
     }
 
     bundle.asModuleSpec = new ModuleSpec(bundle.as);
-    bundle.as = bundle.asModuleSpec.getLoadBundleFileNamePrefix();
+    var loadBundleFileNamePrefix = bundle.asModuleSpec.getLoadBundleFileNamePrefix();
+    if (loadBundleFileNamePrefix) {
+        bundle.as = loadBundleFileNamePrefix;
+    }
     bundle.bundleExportNamespace = bundle.asModuleSpec.namespace;
 
     function assertBundleOutputUndefined() {
@@ -450,10 +466,11 @@ function bundleJs(moduleToBundle, as) {
                 }
             } else {
                 logger.logError("Error: This is not a maven project. You must define a namespace via the 'namespace' function on the bundle.");
-                return;
+                return bundle;
             }
             logger.logInfo("\t- Bundle will be exported as '" + bundle.bundleExportNamespace + ":" + bundle.as + "'.");
         }
+        return bundle;
     };
 
     bundle.importAs = function() {

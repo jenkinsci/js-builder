@@ -18,6 +18,7 @@ var entryModuleTemplate = templates.getTemplate('entry-module.hbs');
 
 var hasJenkinsJsModulesDependency = dependencies.hasJenkinsJsModulesDep();
 var preBundleListeners = [];
+var postBundleListeners = [];
 var globalImportMappings = [];
 var globalExportMappings = [];
 
@@ -31,6 +32,18 @@ var globalExportMappings = [];
  */
 exports.onPreBundle = function(listener) {
     preBundleListeners.push(listener);
+};
+
+/**
+ * Add a listener to be called just after Browserify finishes bundling.
+ * <p>
+ * The listener is called with the {@code bundle} as {@code this} and
+ * the location of the generated bundle as as the only arg.
+ *
+ * @param listener The listener to add.
+ */
+exports.onPostBundle = function(listener) {
+    postBundleListeners.push(listener);
 };
 
 exports.addGlobalImportMapping = function(mapping) {
@@ -173,8 +186,16 @@ exports.doJSBundle = function(bundle, applyImports) {
             .pipe(pack()); // repack the bundle after the previous transform
     }
 
+    var through = require('through2');
+    var bundleOutFile = bundleTo + '/' + bundle.bundleOutputFile;
     return bundleOutput.pipe(source(bundle.bundleOutputFile))
-        .pipe(gulp.dest(bundleTo));
+        .pipe(gulp.dest(bundleTo))
+        .pipe(through.obj(function (bundle, encoding, callback) {
+            for (var i = 0; i < postBundleListeners.length; i++) {
+                postBundleListeners[i].call(bundle, bundleOutFile);
+            }
+            callback();
+        }));
 };
 
 exports.doCSSBundle = function(bundle, resource) {
