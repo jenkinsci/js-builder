@@ -70,7 +70,8 @@ exports.doJSBundle = function(bundle, applyImports) {
         if (bundle.useGlobalExportMappings === true) {
             if (main.bundleCount() > 1 && globalExportMappings.length > 0) {
                 logger.logError('Unable to apply bundle dependency "export" configurations from package.json because there are multiple bundles being generated.');
-                logger.logError('   (a given module/package export should only ever be done from one bundle i.e. cannot be done from multiple)');
+                logger.logError('   (exporting the same package from multiple bundles is not permitted)');
+                logger.logError('   TIP: From inside gulpfile.js, call bundle.export([package-name]) directly on the bundle performing the export.');
             } else {
                 for (var i = 0; i < globalExportMappings.length; i++) {
                     bundle.export(globalExportMappings[i]);
