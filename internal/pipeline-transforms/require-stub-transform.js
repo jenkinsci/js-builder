@@ -8,6 +8,7 @@ var through = require('through2');
 var unpack = require('browser-unpack');
 var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var logger = require('../logger');
+var node_modules_path = process.cwd() + '/node_modules/';
 var args = require('../args');
 
 function pipelingPlugin(moduleMappings) {
@@ -141,7 +142,6 @@ function removeDependant(moduleDefToRemove, metadata) {
 
 function extractModuleDefs(packEntries) {
     var modulesDefs = {};
-    var node_modules_path = process.cwd() + '/node_modules/';
 
     for (var i in packEntries) {
         var packEntry = packEntries[i];
@@ -165,8 +165,8 @@ function extractModuleDefs(packEntries) {
                         dependancies: []
                     };
                     
-                    if (typeof packId === 'string' && packId.indexOf(node_modules_path) === 0) {
-                        moduleDef.node_module = packId.substring(node_modules_path.length);
+                    if (typeof packId === 'string') {
+                        moduleDef.node_module = nodeModulesRelPath(packId);
                     }
                     
                     modulesDefs[packId] = moduleDef;
@@ -220,6 +220,13 @@ function addDependanciesToDefs(metadata) {
             }
         }
     }
+}
+
+function nodeModulesRelPath(absoluteModulePath) {
+    if (absoluteModulePath.indexOf(node_modules_path) === 0) {
+        return absoluteModulePath.substring(node_modules_path.length);
+    }
+    return undefined;
 }
 
 function getPackEntryById(packEntries, id) {
