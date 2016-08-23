@@ -8,6 +8,7 @@ var through = require('through2');
 var unpack = require('browser-unpack');
 var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var logger = require('../logger');
+var args = require('../args');
 
 function pipelingPlugin(moduleMappings) {
     return through.obj(function (bundle, encoding, callback) {
@@ -72,7 +73,9 @@ function updateBundleStubs(packEntries, moduleMappings) {
         }
     }    
     
-    metadata = fullPathsToIds(metadata);
+    if (!args.isArgvSpecified('--full-paths')) {
+        metadata = fullPathsToIds(metadata);
+    }
     
     // Keeping as it's handy for debug purposes.
     //require('fs').writeFileSync('./target/bundlepack.json', JSON.stringify(packEntries, undefined, 4));
