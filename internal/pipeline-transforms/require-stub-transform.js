@@ -38,41 +38,60 @@ function updateBundleStubs(packEntries, moduleMappings) {
         // statements for the modules defined in the supplied moduleMappings.
         // In that case, nothing to be done so exit out.
     } else {
-        for (var i in moduleMappings) {
+        for (var i = 0; i < moduleMappings.length; i++) {
             var moduleMapping = moduleMappings[i];
+            var toSpec = new ModuleSpec(moduleMapping.to);
+            var importAs = toSpec.importAs();
+            var newSource = "module.exports = require('@jenkins-cd/js-modules').require('" + importAs + "');";
 
             if (!moduleMapping.fromSpec) {
                 moduleMapping.fromSpec = new ModuleSpec(moduleMapping.from);
             }
-
-            var moduleName = moduleMapping.fromSpec.moduleName;
-            var mappedPackEntries = metadata.getPackEntriesByName(moduleName);
-            if (mappedPackEntries.length === 1) {
-                var packEntry = mappedPackEntries[0];
-                var moduleDef = metadata.modulesDefs[packEntry.id];
-
-                if (moduleDef) {
-                    var toSpec = new ModuleSpec(moduleMapping.to);
-                    var importAs = toSpec.importAs();
-
-                    packEntry.source = "module.exports = require('@jenkins-cd/js-modules').require('" + importAs + "');";
-                    packEntry.deps = {
-                        '@jenkins-cd/js-modules': jsModulesModuleDef[0].id
-                    };
-
-                    // Go to all of the dependencies and remove this module from
-                    // it's list of dependants.
-                    removeDependant(moduleDef, metadata);
+            
+            mapByPackageName(moduleMapping.fromSpec.moduleName, newSource);
+            
+            // And check are there aliases that can be mapped...
+            if (moduleMapping.config && moduleMapping.config.aliases) {
+                var aliases = moduleMapping.config.aliases;
+                for (var ii = 0; ii < aliases.length; ii++) {
+                    mapByNodeModulesPath(aliases[ii], newSource);
                 }
-            } else if (mappedPackEntries.length > 1) {
-                logger.logWarn('Cannot map module "' + moduleName + '". Multiple bundle map entries are known by this name (in different contexts).');
-            } else {
-                // This can happen if the pack with that ID was already removed
-                // because it's no longer being used (has nothing depending on it).
-                // See removeDependant and how it calls removePackEntryById.
             }
         }
-    }    
+    }
+
+    function mapByPackageName(moduleName, newSource) {
+        var mappedPackEntries = metadata.getPackEntriesByName(moduleName);
+        if (mappedPackEntries.length === 1) {
+            setPackSource(mappedPackEntries[0], newSource);
+        } else if (mappedPackEntries.length > 1) {
+            logger.logWarn('Cannot map module "' + moduleName + '". Multiple bundle map entries are known by this name (in different contexts).');
+        } else {
+            // This can happen if the pack with that ID was already removed
+            // because it's no longer being used (has nothing depending on it).
+            // See removeDependant and how it calls removePackEntryById.
+        }
+    }
+    function mapByNodeModulesPath(node_modules_path, newSource) {
+        var packEntry = metadata.getPackEntriesByNodeModulesPath(node_modules_path);
+        if (packEntry) {
+            setPackSource(packEntry, newSource);
+        }
+    }
+    function setPackSource(packEntry, newSource) {
+        var moduleDef = metadata.modulesDefs[packEntry.id];
+
+        if (moduleDef) {
+            packEntry.source = newSource;
+            packEntry.deps = {
+                '@jenkins-cd/js-modules': jsModulesModuleDef[0].id
+            };
+
+            // Go to all of the dependencies and remove this module from
+            // it's list of dependants.
+            removeDependant(moduleDef, metadata);
+        }
+    }
     
     if (!args.isArgvSpecified('--full-paths')) {
         metadata = fullPathsToIds(metadata);
@@ -94,6 +113,9 @@ function extractBundleMetadata(packEntries) {
         },
         getPackEntriesByName: function(name) {
             return getPackEntriesByName(this, name);
+        },
+        getPackEntriesByNodeModulesPath: function(node_modules_path) {
+            return getPackEntriesByNodeModulesPath(this, node_modules_path);
         },
         getModuleDefById: function(id) {
             return modulesDefs[id];
@@ -254,6 +276,22 @@ function getPackEntriesByName(metadata, name) {
     }
 
     return packEntries;
+}
+
+function getPackEntriesByNodeModulesPath(metadata, node_modules_path) {
+    for (var packId in metadata.modulesDefs) {
+        if (metadata.modulesDefs.hasOwnProperty(packId)) {
+            var modulesDef = metadata.modulesDefs[packId];
+            if (modulesDef.node_module && (modulesDef.node_module === node_modules_path || modulesDef.node_module === node_modules_path + '.js')) {
+                var packEntry = metadata.getPackEntryById(packId);
+                if (packEntry) {
+                    return packEntry;
+                }
+            }
+        }
+    }
+
+    return undefined;
 }
 
 function removePackEntryById(metadata, id) {

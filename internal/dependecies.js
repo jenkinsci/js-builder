@@ -80,7 +80,12 @@ exports.processExternalizedDependencies = function(builder) {
 
         if (imports) {
             for (var i = 0; i < imports.length; i++) {
-                builder.import(imports[i]);
+                var theImport = imports[i];
+                if (typeof theImport === 'object') {
+                    builder.import(theImport.name, theImport);
+                } else {
+                    builder.import(theImport);
+                }
             }
         }
         var exports = packageJson.jenkinscd.export;
