@@ -27,34 +27,7 @@ function pipelingPlugin(moduleMappings) {
 }
 
 function updateBundleStubs(packEntries, moduleMappings) {
-    var modulesDefs = extractModuleDefs(packEntries);
-    var metadata = {
-        packEntries: packEntries,
-        modulesDefs: modulesDefs,
-        getPackEntryById: function(id) {
-            return getPackEntryById(this.packEntries, id);
-        },
-        getPackEntriesByName: function(name) {
-            return getPackEntriesByName(this, name);
-        },
-        getModuleDefById: function(id) {
-            return modulesDefs[id];
-        },
-        getModuleDefByName: function(name) {
-            return modulesDefs[name];
-        }
-    };
-
-    // We could remove unused modules from the packEntries at this point i.e. modules
-    // that did not make an entry in modulesDefs are modules that nothing depends on.
-    // Is there any good reason why these can not be removed from the bundle? Is there
-    // a reason why browserify did not remove them? I've (TF) seen this and I'm not
-    // talking about the entry module, which would often not have anything depending
-    // on it.
-
-    addDependantsToDefs(metadata);
-    addDependanciesToDefs(metadata);
-
+    var metadata = extractBundleMetadata(packEntries);
     var jsModulesModuleDef = metadata.getPackEntriesByName('@jenkins-cd/js-modules');
 
     if (jsModulesModuleDef.length === 0) {
@@ -97,10 +70,44 @@ function updateBundleStubs(packEntries, moduleMappings) {
                 // See removeDependant and how it calls removePackEntryById.
             }
         }
-    }
-
+    }    
+    
+    metadata = fullPathsToIds(metadata);
+    
     // Keeping as it's handy for debug purposes.
     //require('fs').writeFileSync('./target/bundlepack.json', JSON.stringify(packEntries, undefined, 4));
+    
+    return metadata;
+}
+
+function extractBundleMetadata(packEntries) {
+    var modulesDefs = extractModuleDefs(packEntries);
+    var metadata = {
+        packEntries: packEntries,
+        modulesDefs: modulesDefs,
+        getPackEntryById: function(id) {
+            return getPackEntryById(this.packEntries, id);
+        },
+        getPackEntriesByName: function(name) {
+            return getPackEntriesByName(this, name);
+        },
+        getModuleDefById: function(id) {
+            return modulesDefs[id];
+        },
+        getModuleDefByName: function(name) {
+            return modulesDefs[name];
+        }
+    };
+
+    // We could remove unused modules from the packEntries at this point i.e. modules
+    // that did not make an entry in modulesDefs are modules that nothing depends on.
+    // Is there any good reason why these can not be removed from the bundle? Is there
+    // a reason why browserify did not remove them? I've (TF) seen this and I'm not
+    // talking about the entry module, which would often not have anything depending
+    // on it.
+
+    addDependantsToDefs(metadata);
+    addDependanciesToDefs(metadata);
 
     return metadata;
 }
@@ -138,11 +145,11 @@ function extractModuleDefs(packEntries) {
 
         for (var moduleName in packEntry.deps) {
             if (packEntry.deps.hasOwnProperty(moduleName)) {
-                var fullModulePath = packEntry.deps[moduleName];
-                var moduleDef = modulesDefs[fullModulePath];
+                var packId = packEntry.deps[moduleName];
+                var moduleDef = modulesDefs[packId];
                 if (!moduleDef) {
                     moduleDef = {
-                        id: fullModulePath,
+                        id: packId,
                         knownAs: [],
                         isKnownAs: function(name) {
                             // Note that we need to be very careful about how we
@@ -155,11 +162,11 @@ function extractModuleDefs(packEntries) {
                         dependancies: []
                     };
                     
-                    if (fullModulePath.indexOf(node_modules_path) === 0) {
-                        moduleDef.node_module = fullModulePath.substring(node_modules_path.length);
+                    if (typeof packId === 'string' && packId.indexOf(node_modules_path) === 0) {
+                        moduleDef.node_module = packId.substring(node_modules_path.length);
                     }
                     
-                    modulesDefs[fullModulePath] = moduleDef;
+                    modulesDefs[packId] = moduleDef;
                 }
                 if (moduleDef.knownAs.indexOf(moduleName) === -1) {
                     moduleDef.knownAs.push(moduleName);
@@ -240,12 +247,48 @@ function getPackEntriesByName(metadata, name) {
 }
 
 function removePackEntryById(metadata, id) {
-    for (var i in metadata.packEntries) {
-        if (metadata.packEntries[i].id.toString() === id.toString()) {
-            metadata.packEntries.splice(i, 1);
-            return;
+    for (var packId in metadata.packEntries) {
+        if (metadata.packEntries.hasOwnProperty(packId)) {
+            if (metadata.packEntries[packId].id.toString() === id.toString()) {
+                metadata.packEntries.splice(packId, 1);
+                return;
+            }
         }
     }
+}
+
+function fullPathsToIds(metadata) {
+    var nextPackId = 1;
+
+    for (var i in metadata.packEntries) {
+        if (metadata.packEntries.hasOwnProperty(i)) {
+            var packEntry = metadata.packEntries[i];
+            var currentPackId = packEntry.id;
+
+            mapDependencyId(currentPackId, nextPackId);
+            packEntry.id = nextPackId;
+
+            // And inc...
+            nextPackId++;
+        }
+    }
+    
+    function mapDependencyId(from, to) {
+        for (var i in metadata.packEntries) {
+            if (metadata.packEntries.hasOwnProperty(i)) {
+                var packEntry = metadata.packEntries[i];
+                var packDeps = packEntry.deps;
+                
+                for (var dep in packDeps) {
+                    if (packDeps.hasOwnProperty(dep) && packDeps[dep] === from) {
+                        packDeps[dep] = to;
+                    }
+                }
+            }
+        }
+    }
+    
+    return extractBundleMetadata(metadata.packEntries);
 }
 
 function listAllModuleNames(modulesDefs) {
