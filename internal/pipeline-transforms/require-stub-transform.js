@@ -131,18 +131,18 @@ function removeDependant(moduleDefToRemove, metadata) {
 
 function extractModuleDefs(packEntries) {
     var modulesDefs = {};
+    var node_modules_path = process.cwd() + '/node_modules/';
 
     for (var i in packEntries) {
         var packEntry = packEntries[i];
 
         for (var moduleName in packEntry.deps) {
             if (packEntry.deps.hasOwnProperty(moduleName)) {
-                var depPackId = packEntry.deps[moduleName];
-                var moduleDef = modulesDefs[depPackId];
+                var fullModulePath = packEntry.deps[moduleName];
+                var moduleDef = modulesDefs[fullModulePath];
                 if (!moduleDef) {
-                    var depPackEntry = getPackEntryById(packEntries, depPackId);
                     moduleDef = {
-                        id: depPackId,
+                        id: fullModulePath,
                         knownAs: [],
                         isKnownAs: function(name) {
                             // Note that we need to be very careful about how we
@@ -154,7 +154,12 @@ function extractModuleDefs(packEntries) {
                         dependants: [],
                         dependancies: []
                     };
-                    modulesDefs[depPackId] = moduleDef;
+                    
+                    if (fullModulePath.indexOf(node_modules_path) === 0) {
+                        moduleDef.node_module = fullModulePath.substring(node_modules_path.length);
+                    }
+                    
+                    modulesDefs[fullModulePath] = moduleDef;
                 }
                 if (moduleDef.knownAs.indexOf(moduleName) === -1) {
                     moduleDef.knownAs.push(moduleName);
