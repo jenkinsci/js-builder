@@ -42,7 +42,7 @@ function updateBundleStubs(packEntries, moduleMappings) {
             var moduleMapping = moduleMappings[i];
             var toSpec = new ModuleSpec(moduleMapping.to);
             var importAs = toSpec.importAs();
-            var newSource = "module.exports = require('@jenkins-cd/js-modules').require('" + importAs + "');";
+            var newSource = "module.exports = require('@jenkins-cd/js-modules').requireModule('" + importAs + "');";
 
             if (!moduleMapping.fromSpec) {
                 moduleMapping.fromSpec = new ModuleSpec(moduleMapping.from);

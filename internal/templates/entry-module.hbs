@@ -10,14 +10,14 @@ function ___$$$___exec() {
 
 function ___$$$___doExports() {
     // Do exports, if any ....
-    {{#if entryExport}}___$$$___jsModules.export({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
+    {{#if entryExport}}___$$$___jsModules.exportModule({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
 
     {{#if dependencyExports}}
         function doDependencyExport(module, normalizedPackageName, jsModuleNames) {
-            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.patch, module);
-            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.minor, module);
-            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.major, module);
-            ___$$$___jsModules.export(normalizedPackageName, jsModuleNames.any, module);
+            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.patch, module);
+            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.minor, module);
+            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.major, module);
+            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.any, module);
         }
 
         {{#each dependencyExports}}
@@ -38,7 +38,7 @@ function ___$$$___doCSS() {
 }
 
 if (___$$$___requiredModuleMappings.length > 0) {
-    ___$$$___jsModules.import.apply(___$$$___jsModules.import, ___$$$___requiredModuleMappings)
+    ___$$$___jsModules.importModule.apply(___$$$___jsModules.importModule, ___$$$___requiredModuleMappings)
         .onFulfilled(function() {
         ___$$$___exec();
         ___$$$___doExports();

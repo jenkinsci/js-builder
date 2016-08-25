@@ -53,10 +53,10 @@
     "xml2js": "^0.4.9"
   },
   "devDependencies": {
-    "@jenkins-cd/js-modules": "^0.0.6",
+    "@jenkins-cd/js-modules": "^0.0.7-beta1",
     "zombie": "^4.2.1"
   },
   "peerDependencies": {
-    "@jenkins-cd/js-modules": "^0.0.6"
+    "@jenkins-cd/js-modules": "^0.0.7-beta1"
   }
 }
