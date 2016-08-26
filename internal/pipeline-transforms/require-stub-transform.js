@@ -322,6 +322,9 @@ function fullPathsToIds(metadata) {
     }
     
     function mapDependencyId(from, to) {
+        var dedupeSourceFrom = 'arguments[4]["' + from + '"][0].apply(exports,arguments)';
+        var dedupeSourceTo = 'arguments[4][' + to + '][0].apply(exports,arguments)';
+        
         for (var i in metadata.packEntries) {
             if (metadata.packEntries.hasOwnProperty(i)) {
                 var packEntry = metadata.packEntries[i];
@@ -331,6 +334,12 @@ function fullPathsToIds(metadata) {
                     if (packDeps.hasOwnProperty(dep) && packDeps[dep] === from) {
                         packDeps[dep] = to;
                     }
+                }
+                
+                // Check the pack entry source for it being a dedupe,
+                // translating it if required.
+                if (packEntry.source === dedupeSourceFrom) {
+                    packEntry.source = dedupeSourceTo;
                 }
             }
         }

@@ -139,6 +139,28 @@ describe("require-stub-transform", function () {
         });
     });
 
+
+    it("- test browserify dedupe - JENKINS-37714", function (done) {
+        buildBrowserPack('dedupe-main.js', function (packEntries) {
+                        var metadata = transformModule.updateBundleStubs(packEntries, []);
+
+            // We should have defs for all modules except module4, module5 and module6.
+            var dedupeOnePackEntry = getPackEntryByName(metadata, './dedupe-one');
+            var dedupeTwoPackEntry = getPackEntryByName(metadata, './dedupe-two');
+            
+            expect(dedupeOnePackEntry).toBeDefined();
+            expect(dedupeTwoPackEntry).toBeDefined();
+            expect(dedupeOnePackEntry.id).toBe(2);
+            expect(dedupeTwoPackEntry.id).toBe(3);
+            
+            // The contents of both these modules are identical, causing browserify
+            // to optimize by pointing dedupeTwoPackEntry to just point to dedupeOnePackEntry.
+            // We ant to check that the module id was properly translated.
+            expect(dedupeTwoPackEntry.source).toBe('arguments[4][' + dedupeOnePackEntry.id + '][0].apply(exports,arguments)');
+
+            done()
+        });
+    });    
 });
 
 function getPackEntryByName(metadata, name) {
@@ -173,7 +195,14 @@ function logMetadata(metadata) {
 }
 
 function buildBrowserPack(source, onDone) {
-    var b = browserify('./spec/modules/' + source);
+    var browserifyConfig = {
+        entries: ['./spec/modules/' + source],
+        extensions: ['.js'],
+        cache: {},
+        packageCache: {},
+        fullPaths: true
+    };
+    var b = browserify(browserifyConfig);
 
     if (!fs.existsSync('./target/testbundles')) {
         fs.mkdirSync('./target/testbundles');
