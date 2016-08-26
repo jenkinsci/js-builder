@@ -274,13 +274,17 @@ function addModuleMappingTransforms(bundle, bundler) {
     var requiredModuleMappings = [];
 
     if (moduleMappings.length > 0) {
-        var requireTransform = transformTools.makeRequireTransform("requireTransform",
-            {evaluateArguments: true},
-            function(args, opts, cb) {
-                var required = args[0];
+        var requireSearch = transformTools.makeStringTransform("requireSearch", {},
+            function(content, opts, cb) {
                 for (var i = 0; i < moduleMappings.length; i++) {
                     var mapping = moduleMappings[i];
-                    if (mapping.fromSpec.moduleName === required) {
+                    // Do a rough search for the module name. If we find it, then we
+                    // add that module name to the list. This may result in some false
+                    // positives, but that's okay. The most important thing is that we
+                    // do add the import for the module if it is required. Adding additional
+                    // imports for modules not required is not optimal, but is also not the
+                    // end of the world.
+                    if (content.indexOf(mapping.fromSpec.moduleName) !== -1) {
                         var toSpec = new ModuleSpec(mapping.to);
                         var importAs = toSpec.importAs();
                         if (requiredModuleMappings.indexOf(importAs) === -1) {
@@ -288,9 +292,9 @@ function addModuleMappingTransforms(bundle, bundler) {
                         }
                     }
                 }
-                return cb();
+                return cb(null, content);
             });
-        bundler.transform({ global: true }, requireTransform);
+        bundler.transform({ global: true }, requireSearch);
     }
     var importExportApplied = false;
     var importExportTransform = transformTools.makeStringTransform("importExportTransform", {},
