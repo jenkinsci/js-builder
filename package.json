@@ -1,6 +1,6 @@
 {
   "name": "@jenkins-cd/js-builder",
-  "version": "0.0.38-beta3",
+  "version": "0.0.38",
   "description": "Jenkins CI JavaScript Build utilities.",
   "main": "index.js",
   "scripts": {
