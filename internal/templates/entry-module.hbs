@@ -37,15 +37,21 @@ function ___$$$___doCSS() {
     {{/each}}
 }
 
-if (___$$$___requiredModuleMappings.length > 0) {
-    ___$$$___jsModules.importModule.apply(___$$$___jsModules.importModule, ___$$$___requiredModuleMappings)
-        .onFulfilled(function() {
+function ___$$$___doBundleInit() {
+    try {
         ___$$$___exec();
         ___$$$___doExports();
         ___$$$___doCSS();
+    } catch (e) {
+        console.error('Error initializing Jenkins JavaScript bundle "{{bundle.as}}"', e);
+    }
+}
+
+if (___$$$___requiredModuleMappings.length > 0) {
+    ___$$$___jsModules.importModule.apply(___$$$___jsModules.importModule, ___$$$___requiredModuleMappings)
+        .onFulfilled(function() {
+        ___$$$___doBundleInit();
     });
 } else {
-    ___$$$___exec();
-    ___$$$___doExports();
-    ___$$$___doCSS();
+    ___$$$___doBundleInit();
 }
