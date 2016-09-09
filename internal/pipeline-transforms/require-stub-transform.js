@@ -146,7 +146,7 @@ function removeDependant(moduleDefToRemove, metadata) {
                 var dependantEntryIndex = moduleDef.dependants.indexOf(moduleDefToRemove.id);
                 if (dependantEntryIndex !== -1) {
                     moduleDef.dependants.splice(dependantEntryIndex, 1);
-                    if (moduleDef.dependants.length === 0) {
+                    if (moduleDef.dependants.length === 0 && !isReferencedByDedupe(metadata, moduleDef.id)) {
                         // If this module no longer has any dependants (i.e. nothing depends on it),
                         // that means that we can remove this module from the bundle. In turn, that
                         // also means that we can remove this module from the dependants list of other
@@ -303,6 +303,25 @@ function removePackEntryById(metadata, id) {
             }
         }
     }
+}
+
+/**
+ * Check all packs in the bundle, returning <code>true</code> if there's a pack
+ * that contains a deduped reference to the supplied pack Id.
+ * @param metadata Bundle metadata.
+ * @param packId Pack Id.
+ * @returns {boolean} 
+ */
+function isReferencedByDedupe(metadata, packId) {
+    for (var i in metadata.packEntries) {
+        if (metadata.packEntries.hasOwnProperty(i)) {
+            var packEntry = metadata.packEntries[i];
+            if (packEntry.source === 'arguments[4]["' + packId + '"][0].apply(exports,arguments)') {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function fullPathsToIds(metadata) {
