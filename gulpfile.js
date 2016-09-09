@@ -31,6 +31,15 @@ builder.bundle('spec/testmodule.js', 'testmodule_3')
     .inDir('target/testmodule')
     .generateNoImportsBundle();
 
+//  - bundle "as" with a version - no prerelease tag 
+builder.bundle('spec/testmodule.js', 'testmodule@1.1.1')
+    .inDir('target/testmodule');
+
+//  - bundle "as" with a version - has a prerelease tag
+//  - the prerelease tag should get dropped
+builder.bundle('spec/testmodule.js', 'testmodule@1.1.2-beta1')
+    .inDir('target/testmodule');
+
 // Let's bundle some CSS ...
 builder.bundle('spec/frameworkx/style.css');
 builder.bundle('spec/frameworky/style.less');
