@@ -393,7 +393,7 @@ function setAdjunctInDir(bundle) {
     if (bundle.bundleExportNamespace) {
         adjunctBase += '/' + normalizeForJavaIdentifier(bundle.bundleExportNamespace);
     } else if (maven.isMavenProject) {
-        adjunctBase += '/' + normalizeForJavaIdentifier(maven.getArtifactId());
+        adjunctBase += '/' + maven.getArtifactId();
     }
     bundle.bundleInDir = 'target/classes/' + adjunctBase;
     return _string.replaceAll(adjunctBase, '/', '\.');
