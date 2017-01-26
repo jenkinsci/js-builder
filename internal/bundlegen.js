@@ -4,6 +4,7 @@ var main = require('../index');
 var langConfig = require('./langConfig');
 var dependencies = require('./dependecies');
 var paths = require('./paths');
+var path = require('path');
 var maven = require('./maven');
 var logger = require('./logger');
 var args = require('./args');
@@ -15,6 +16,7 @@ var _string = require('underscore.string');
 var templates = require('./templates');
 var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var entryModuleTemplate = templates.getTemplate('entry-module.hbs');
+var entryModuleWrapperTemplate = templates.getTemplate('entry-module-wrapper.hbs');
 var packageJson = require(process.cwd() + '/package.json');
 
 var hasJenkinsJsModulesDependency = dependencies.hasJenkinsJsModulesDep();
@@ -123,8 +125,17 @@ exports.doJSBundle = function(bundle, applyImports) {
         fs.writeFileSync(fileToBundle, "module.exports = require('" + bundle.module + "');");
     }
 
+    var fileToBasename = path.basename(fileToBundle);
+    var wrapperFileDir = './target/js-bundle-src';
+    var wrapperFileName = wrapperFileDir + '/_js_wrapper-' + fileToBasename;
+    var wrapperFileContent = entryModuleWrapperTemplate({
+        entrymodule: './' + path.relative(wrapperFileDir, fileToBundle)
+    });
+    paths.mkdirp(wrapperFileDir);
+    fs.writeFileSync(wrapperFileName, wrapperFileContent);
+
     var browserifyConfig = {
-        entries: [fileToBundle],
+        entries: [wrapperFileName],
         extensions: ['.js', '.es6', '.jsx', '.hbs'],
         cache: {},
         packageCache: {},
