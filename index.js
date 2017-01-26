@@ -319,6 +319,8 @@ function bundleJs(moduleToBundle, as) {
     bundle.useGlobalImportMappings = true;
     bundle.useGlobalExportMappings = true;
     bundle.minifyBundle = args.isArgvSpecified('--minify');
+    bundle.startupModules = [];
+
     bundle.generateNoImportsBundle = function() {
         if (skipBundle) {
             return bundle;
@@ -489,6 +491,13 @@ function bundleJs(moduleToBundle, as) {
             }
         }
         return undefined;
+    };
+
+    bundle.onStartup = function (startupModule) {
+        if (typeof startupModule === 'string') {
+            bundle.startupModules.push(startupModule);
+        }
+        return bundle;
     };
 
     if (skipBundle) {

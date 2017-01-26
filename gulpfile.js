@@ -29,6 +29,8 @@ builder.bundle('spec/testmodule.js', 'testmodule_2')
 builder.bundle('spec/testmodule.js', 'testmodule_3')
     .import('underscore.string', {addDefaultCSS: true})
     .inDir('target/testmodule')
+    .onStartup('./spec/startup-module-1.js')
+    .onStartup('./spec/startup-module-2.js')
     .generateNoImportsBundle();
 
 //  - bundle "as" with a version - no prerelease tag 

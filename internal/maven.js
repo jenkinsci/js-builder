@@ -27,8 +27,7 @@ exports.getPackaging = function() {
 };
 
 exports.isHPI = function() {
-    assertIsMavenProject();
-    return (exports.getPackaging() === 'hpi');
+    return (exports.isMavenProject && exports.getPackaging() === 'hpi');
 };
 
 function assertIsMavenProject(preamble) {
