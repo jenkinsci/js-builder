@@ -125,6 +125,13 @@ exports.doJSBundle = function(bundle, applyImports) {
         fs.writeFileSync(fileToBundle, "module.exports = require('" + bundle.module + "');");
     }
 
+    //
+    // Lets load the entry module via a "wrapper" module. This wrapper
+    // module will allow us to "inject" startup scripts (into the bundle) that
+    // will need to execute and resolve before the entry module is allowed to execute.
+    // Bundles will use this to async load resources that must be loaded before the
+    // bundle can execute e.g. i18n plugin resources in Blue Ocean.
+    //
     var fileToBasename = path.basename(fileToBundle);
     var wrapperFileDir = './target/js-bundle-src';
     var wrapperFileName = wrapperFileDir + '/_js_wrapper-' + fileToBasename;
