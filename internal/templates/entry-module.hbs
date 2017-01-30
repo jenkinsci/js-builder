@@ -3,8 +3,9 @@ var ___$$$___jsModules = require('@jenkins-cd/js-modules');
 ___$$$___jsModules.whoami('{{#if bundle.bundleExportNamespace}}{{bundle.bundleExportNamespace}}:{{/if}}{{bundle.as}}');
 
 /*** Start Module Exec Function ***************************************/
-function ___$$$___exec() {
+function ___$$$___exec(onExec) {
     {{content}}
+    {{#if bundle.doOnExecCall}}onExec();{{/if}}
 }
 /*** End Module Exec Function   ***************************************/
 
@@ -39,9 +40,10 @@ function ___$$$___doCSS() {
 
 function ___$$$___doBundleInit() {
     try {
-        ___$$$___exec();
-        ___$$$___doExports();
-        ___$$$___doCSS();
+        ___$$$___exec(function() {
+            ___$$$___doExports();
+            ___$$$___doCSS();
+        });
     } catch (e) {
         console.error('Error initializing Jenkins JavaScript bundle "{{bundle.as}}"', e);
     }

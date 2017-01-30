@@ -12,6 +12,7 @@ function onFullfilled(moduleName) {
     }
     if (fullfilled.length === numStartupModules) {
         require('{{entrymodule}}');
+        onExec();
     }
 }
 

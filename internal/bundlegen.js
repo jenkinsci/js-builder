@@ -126,6 +126,7 @@ exports.doJSBundle = function(bundle, applyImports) {
         fs.writeFileSync(fileToBundle, "module.exports = require('" + bundle.module + "');");
     }
 
+    bundle.doOnExecCall = true;
     if (bundle.startupModules.length > 0) {
         var wrapperFileDir = './target/js-bundle-src';
         var relativeStartupModules = [];
@@ -163,6 +164,9 @@ exports.doJSBundle = function(bundle, applyImports) {
                 hpiPluginId: (maven.isHPI() ? maven.getArtifactId() : undefined),
                 startupModules: relativeStartupModules
             });
+            // Switch off the calling of the onExec callback. this is done inside
+            // entryModuleWrapperTemplate, after all startup scripts are "done".
+            bundle.doOnExecCall = false;
             paths.mkdirp(wrapperFileDir);
             fs.writeFileSync(wrapperFileName, wrapperFileContent);
             fileToBundle = wrapperFileName;
