@@ -1,5 +1,6 @@
 var gulp = require('gulp');
 var fs = require('fs');
+var cwd = process.cwd();
 var main = require('../index');
 var langConfig = require('./langConfig');
 var dependencies = require('./dependecies');
@@ -133,29 +134,39 @@ exports.doJSBundle = function(bundle, applyImports) {
             var startupModule = bundle.startupModules[ii];
             if (startupModule.charAt(0) === '.') {
                 var relativeModulePath = path.relative(wrapperFileDir, startupModule);
-                relativeStartupModules.push(relativeModulePath);
+                if (fs.existsSync(cwd + '/' + startupModule + '.js') || fs.existsSync(cwd + '/' + startupModule)) {
+                    relativeStartupModules.push(relativeModulePath);
+                } else {
+                    logger.logInfo('Javascript bundle "' + bundle.as + '" will not execute startup script "' + startupModule + '". Unable to find local script.')
+                }
             } else {
-                relativeStartupModules.push(startupModule);
+                if (fs.existsSync(cwd + '/node_modules/' + startupModule + '.js') || fs.existsSync(cwd + '/node_modules/' + startupModule)) {
+                    relativeStartupModules.push(startupModule);
+                } else {
+                    logger.logInfo('Javascript bundle "' + bundle.as + '" will not execute startup script "' + startupModule + '". Unable to find script in node_modules.')
+                }
             }
         }
 
-        //
-        // Lets load the entry module via a "wrapper" module. This wrapper
-        // module will allow us to "inject" startup scripts (into the bundle) that
-        // will need to execute and resolve before the entry module is allowed to execute.
-        // Bundles will use this to async load resources that must be loaded before the
-        // bundle can execute e.g. i18n plugin resources in Blue Ocean.
-        //
-        var fileToBasename = path.basename(fileToBundle);
-        var wrapperFileName = wrapperFileDir + '/_js_wrapper-' + fileToBasename;
-        var wrapperFileContent = entryModuleWrapperTemplate({
-            entrymodule: './' + path.relative(wrapperFileDir, fileToBundle),
-            hpiPluginId: (maven.isHPI() ? maven.getArtifactId() : undefined),
-            startupModules: relativeStartupModules
-        });
-        paths.mkdirp(wrapperFileDir);
-        fs.writeFileSync(wrapperFileName, wrapperFileContent);
-        fileToBundle = wrapperFileName;
+        if (relativeStartupModules.length > 0) {
+            //
+            // Lets load the entry module via a "wrapper" module. This wrapper
+            // module will allow us to "inject" startup scripts (into the bundle) that
+            // will need to execute and resolve before the entry module is allowed to execute.
+            // Bundles will use this to async load resources that must be loaded before the
+            // bundle can execute e.g. i18n plugin resources in Blue Ocean.
+            //
+            var fileToBasename = path.basename(fileToBundle);
+            var wrapperFileName = wrapperFileDir + '/_js_wrapper-' + fileToBasename;
+            var wrapperFileContent = entryModuleWrapperTemplate({
+                entrymodule: './' + path.relative(wrapperFileDir, fileToBundle),
+                hpiPluginId: (maven.isHPI() ? maven.getArtifactId() : undefined),
+                startupModules: relativeStartupModules
+            });
+            paths.mkdirp(wrapperFileDir);
+            fs.writeFileSync(wrapperFileName, wrapperFileContent);
+            fileToBundle = wrapperFileName;
+        }
     }
 
     var browserifyConfig = {
