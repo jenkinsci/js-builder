@@ -4,14 +4,18 @@ var packageJson = require(cwd + '/package.json');
 var logger = require('./logger');
 var Version = require('@jenkins-cd/js-modules/js/Version');
 
-exports.getDependency = function(depName) {
+exports.getDependency = function(depName, topLevelOnly) {
+    if (typeof topLevelOnly !== 'boolean') {
+        topLevelOnly = true;
+    }
+
     function findDep(onDepMap) {
         if (onDepMap) {
             return onDepMap[depName];
         }
         return undefined;
     }
-    
+
     var version = findDep(packageJson.dependencies);
     if (version) {
         return {
@@ -34,6 +38,51 @@ exports.getDependency = function(depName) {
                 };
             }
             // TODO: bundled and optional deps?
+        }
+    }
+
+    if (!topLevelOnly) {
+        // If the topLevelOnly flag is set to false,
+        // try find the module inside one of the installed packages.
+
+        function innerModule(onDepMap) {
+            for (var packageName in onDepMap) {
+                if (onDepMap.hasOwnProperty(packageName)) {
+                    // Does the sought depName start with this packageName
+                    // followed by a slash. Thiswould indicate that depName
+                    // is a module inside this packageName.
+                    if (depName.indexOf(packageName + '/') === 0) {
+                        // Now lets make sure the module is actually inside that package
+                        // by checking for the file in node_modules.
+                        if (fs.existsSync(cwd + '/node_modules/' + depName + '.js') || fs.existsSync(cwd + '/node_modules/' + depName)) {
+                            return {
+                                packageName: packageName,
+                                version: onDepMap[packageName]
+                            };
+                        }
+                    }
+                }
+            }
+            return undefined;
+        }
+
+        var packageInfo = innerModule(packageJson.dependencies);
+        if (packageInfo) {
+            packageInfo.type = 'runtime';
+            return packageInfo;
+        } else {
+            packageInfo = innerModule(packageJson.devDependencies);
+            if (packageInfo) {
+                packageInfo.type = 'dev';
+                return packageInfo;
+            } else {
+                packageInfo = innerModule(packageJson.peerDependencies);
+                if (packageInfo) {
+                    packageInfo.type = 'peer';
+                    return packageInfo;
+                }
+                // TODO: bundled and optional deps?
+            }
         }
     }
     
@@ -105,13 +154,23 @@ exports.externalizedVersionMetadata = function(depPackageName) {
     var packageJsonFile = cwd + '/node_modules/' + depPackageName + '/package.json';
     
     if (!fs.existsSync(packageJsonFile)) {
-        return undefined;
+        // Maybe depPackageName is not actually a top level package name.
+        // It might be a module inside a package.
+        var packageInfo = exports.getDependency(depPackageName, false);
+        if (packageInfo) {
+            packageJsonFile = cwd + '/node_modules/' + packageInfo.packageName + '/package.json';
+            if (!fs.existsSync(packageJsonFile)) {
+                return undefined;
+            }
+        } else {
+            return undefined;
+        }
     }
 
     var packageJson = require(packageJsonFile);
     
     var metadata = {};
-    var declaredDepVersion = exports.getDependency(depPackageName);
+    var declaredDepVersion = exports.getDependency(depPackageName, false);
 
     if (!declaredDepVersion) {
         return undefined;

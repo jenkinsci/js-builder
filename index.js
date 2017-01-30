@@ -443,7 +443,7 @@ function bundleJs(moduleToBundle, as) {
                 // This is the "traditional" export use case.
                 bundle.bundleExport = true;
                 bundle.bundleExportNamespace = packageJson.name;
-            } else if (dependencies.getDependency(moduleName) !== undefined) {
+            } else if (dependencies.getDependency(moduleName, false) !== undefined) {
                 // We are exporting some dependency of this module Vs exporting
                 // the top/entry level module of the generated bundle. This allows the bundle
                 // to control loading of a specific dependency (or set of) and then share that with
