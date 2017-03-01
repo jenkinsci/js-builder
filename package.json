@@ -1,6 +1,6 @@
 {
   "name": "@jenkins-cd/js-builder",
-  "version": "0.0.52",
+  "version": "0.0.53",
   "description": "Jenkins CI JavaScript Build utilities.",
   "main": "index.js",
   "scripts": {
@@ -47,7 +47,7 @@
     "gulp-jasmine": "^2.0.1",
     "gulp-jshint": "^2.x",
     "gulp-less": "^1.3.6",
-    "gulp-runner": "^0.1.4",
+    "gulp-runner": "^1.0.0",
     "gulp-util": "^3.0.6",
     "handlebars": "^3.0.3",
     "jasmine-reporters": "^2.0.6",
