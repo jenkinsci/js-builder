@@ -12,7 +12,7 @@ var logger = require('../logger');
 var node_modules_path = process.cwd() + '/node_modules/';
 var args = require('../args');
 
-function pipelingPlugin(moduleMappings) {
+function pipelingPlugin(moduleMappings, bundleInfoOutFile) {
     return through.obj(function (bundle, encoding, callback) {
         if (!(bundle instanceof Buffer)) {
             callback(new Error('Sorry, this transform only supports Buffers.'));
@@ -22,7 +22,13 @@ function pipelingPlugin(moduleMappings) {
         var bundleContent = bundle.toString('utf8');
         var packEntries  = unpack(bundleContent);
 
-        updateBundleStubs(packEntries, moduleMappings);
+        var metadata = updateBundleStubs(packEntries, moduleMappings);
+        var bundleInfo = {
+            jsBuilderVersion: getBuilderVersion(),
+            created: Date.now(),
+            packMetadata: metadata
+        };
+        require('fs').writeFileSync(bundleInfoOutFile, JSON.stringify(bundleInfo));
 
         this.push(JSON.stringify(packEntries));
         callback();
@@ -390,6 +396,12 @@ function listAllModuleNames(modulesDefs) {
     }
 
     return names;
+}
+
+function getBuilderVersion() {
+    var path = require('path');
+    var builderPackageJson = require(path.join(__dirname, '../../package.json'));
+    return builderPackageJson.version;
 }
 
 exports.pipelinePlugin = pipelingPlugin;
