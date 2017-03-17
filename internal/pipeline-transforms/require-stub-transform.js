@@ -11,8 +11,10 @@ var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var logger = require('../logger');
 var node_modules_path = process.cwd() + '/node_modules/';
 var args = require('../args');
+var paths = require('../paths');
+var maven = require('../maven');
 
-function pipelingPlugin(moduleMappings, bundleInfoOutFile) {
+function pipelingPlugin(bundleDef, bundleInfoOutFile) {
     return through.obj(function (bundle, encoding, callback) {
         if (!(bundle instanceof Buffer)) {
             callback(new Error('Sorry, this transform only supports Buffers.'));
@@ -22,20 +24,31 @@ function pipelingPlugin(moduleMappings, bundleInfoOutFile) {
         var bundleContent = bundle.toString('utf8');
         var packEntries  = unpack(bundleContent);
 
-        var metadata = updateBundleStubs(packEntries, moduleMappings);
+        var metadata = updateBundleStubs(packEntries, bundleDef.moduleMappings, true);
         var bundleInfo = {
-            jsBuilderVersion: getBuilderVersion(),
+            jsModulesId: bundleDef.asModuleSpec.importAs(),
             created: Date.now(),
+            jsBuilderVer: getBuilderVersion(),
             packMetadata: metadata
         };
+        if (maven.isHPI()) {
+            bundleInfo.hpiPluginId = maven.getArtifactId();
+        }
+        paths.mkdirp(paths.parentDir(bundleInfoOutFile));
         require('fs').writeFileSync(bundleInfoOutFile, JSON.stringify(bundleInfo));
+
+        // We told updateBundleStubs (above) to skipFullPathToIdRewrite,
+        // so we need to do that before going further.
+        if (!args.isArgvSpecified('--full-paths')) {
+            fullPathsToIds(metadata);
+        }
 
         this.push(JSON.stringify(packEntries));
         callback();
     });
 }
 
-function updateBundleStubs(packEntries, moduleMappings) {
+function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite) {
     var metadata = extractBundleMetadata(packEntries);
     var jsModulesModuleDef = metadata.getPackEntriesByName('@jenkins-cd/js-modules');
 
@@ -106,7 +119,7 @@ function updateBundleStubs(packEntries, moduleMappings) {
         removePackEntryById(metadata, moduleId);
     });
     
-    if (!args.isArgvSpecified('--full-paths')) {
+    if (!skipFullPathToIdRewrite && !args.isArgvSpecified('--full-paths')) {
         metadata = fullPathsToIds(metadata);
     }
     

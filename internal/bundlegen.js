@@ -271,7 +271,7 @@ exports.doJSBundle = function(bundle, applyImports) {
         var bundleInfoOutFile = bundleOutFile + '.json';
 
         bundleOutput = bundleOutput.pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
-            .pipe(requireStubTransform.pipelinePlugin(bundle.moduleMappings, bundleInfoOutFile)) // transform the require stubs
+            .pipe(requireStubTransform.pipelinePlugin(bundle, bundleInfoOutFile)) // transform the require stubs
             .pipe(pack()); // repack the bundle after the previous transform
     }
 
