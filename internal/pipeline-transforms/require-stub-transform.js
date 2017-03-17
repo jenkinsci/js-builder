@@ -25,6 +25,7 @@ function pipelingPlugin(bundleDef, bundleInfoOutFile) {
         var packEntries  = unpack(bundleContent);
 
         var metadata = updateBundleStubs(packEntries, bundleDef.moduleMappings, true);
+        metadata = fullPathsToTruncatedPaths(metadata);
         var bundleInfo = {
             jsModulesId: bundleDef.asModuleSpec.importAs(),
             created: Date.now(),
@@ -350,6 +351,26 @@ function isReferencedByDedupe(metadata, packId) {
     return false;
 }
 
+function fullPathsToTruncatedPaths(metadata) {
+    var pathPrefix = process.cwd() + '/';
+    for (var i in metadata.packEntries) {
+        if (metadata.packEntries.hasOwnProperty(i)) {
+            var packEntry = metadata.packEntries[i];
+            var currentPackId = packEntry.id;
+            var truncatedPackId = currentPackId;
+
+            if (truncatedPackId.indexOf(pathPrefix) === 0) {
+                truncatedPackId = truncatedPackId.substring(pathPrefix.length);
+            }
+
+            mapDependencyId(currentPackId, truncatedPackId, metadata);
+            packEntry.id = truncatedPackId;
+        }
+    }
+
+    return extractBundleMetadata(metadata.packEntries);
+}
+
 function fullPathsToIds(metadata) {
     var nextPackId = 1;
 
@@ -358,39 +379,39 @@ function fullPathsToIds(metadata) {
             var packEntry = metadata.packEntries[i];
             var currentPackId = packEntry.id;
 
-            mapDependencyId(currentPackId, nextPackId);
+            mapDependencyId(currentPackId, nextPackId, metadata);
             packEntry.id = nextPackId;
 
             // And inc...
             nextPackId++;
         }
     }
-    
-    function mapDependencyId(from, to) {
-        var dedupeSourceFrom = 'arguments[4]["' + from + '"][0].apply(exports,arguments)';
-        var dedupeSourceTo = 'arguments[4][' + to + '][0].apply(exports,arguments)';
-        
-        for (var i in metadata.packEntries) {
-            if (metadata.packEntries.hasOwnProperty(i)) {
-                var packEntry = metadata.packEntries[i];
-                var packDeps = packEntry.deps;
-                
-                for (var dep in packDeps) {
-                    if (packDeps.hasOwnProperty(dep) && packDeps[dep] === from) {
-                        packDeps[dep] = to;
-                    }
+
+    return extractBundleMetadata(metadata.packEntries);
+}
+
+function mapDependencyId(from, to, metadata) {
+    var dedupeSourceFrom = 'arguments[4]["' + from + '"][0].apply(exports,arguments)';
+    var dedupeSourceTo = 'arguments[4][' + to + '][0].apply(exports,arguments)';
+
+    for (var i in metadata.packEntries) {
+        if (metadata.packEntries.hasOwnProperty(i)) {
+            var packEntry = metadata.packEntries[i];
+            var packDeps = packEntry.deps;
+
+            for (var dep in packDeps) {
+                if (packDeps.hasOwnProperty(dep) && packDeps[dep] === from) {
+                    packDeps[dep] = to;
                 }
-                
-                // Check the pack entry source for it being a dedupe,
-                // translating it if required.
-                if (packEntry.source === dedupeSourceFrom) {
-                    packEntry.source = dedupeSourceTo;
-                }
+            }
+
+            // Check the pack entry source for it being a dedupe,
+            // translating it if required.
+            if (packEntry.source === dedupeSourceFrom) {
+                packEntry.source = dedupeSourceTo;
             }
         }
     }
-    
-    return extractBundleMetadata(metadata.packEntries);
 }
 
 function listAllModuleNames(modulesDefs) {
