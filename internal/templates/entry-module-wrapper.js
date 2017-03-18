@@ -12,7 +12,13 @@ function onFullfilled(moduleName) {
     }
     if (fullfilled.length === numStartupModules) {
         require('{{entrymodule}}');
-        onExec();
+        try {
+            if (onExec) {
+                onExec();
+            }
+        } catch (e) {
+            console.log('No onExec function, or an unexpected error executing it. Probably because of bundle.generateNoImportsBundle().');
+        }
     }
 }
 
