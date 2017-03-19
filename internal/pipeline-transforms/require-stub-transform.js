@@ -9,6 +9,7 @@ var unpack = require('browser-unpack');
 var browserifyTree = require('browserify-tree');
 var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var logger = require('../logger');
+var pathPrefix = process.cwd() + '/';
 var node_modules_path = process.cwd() + '/node_modules/';
 var args = require('../args');
 var paths = require('../paths');
@@ -367,16 +368,11 @@ function isReferencedByDedupe(metadata, packId) {
 }
 
 function fullPathsToTruncatedPaths(metadata) {
-    var pathPrefix = process.cwd() + '/';
     for (var i in metadata.packEntries) {
         if (metadata.packEntries.hasOwnProperty(i)) {
             var packEntry = metadata.packEntries[i];
             var currentPackId = packEntry.id;
-            var truncatedPackId = currentPackId;
-
-            if (truncatedPackId.indexOf(pathPrefix) === 0) {
-                truncatedPackId = truncatedPackId.substring(pathPrefix.length);
-            }
+            var truncatedPackId = toRelativePath(currentPackId);
 
             mapDependencyId(currentPackId, truncatedPackId, metadata);
             packEntry.id = truncatedPackId;
@@ -403,6 +399,13 @@ function fullPathsToIds(metadata) {
     }
 
     return extractBundleMetadata(metadata.packEntries);
+}
+
+function toRelativePath(path) {
+    if (path.indexOf(pathPrefix) === 0) {
+        return path.substring(pathPrefix.length);
+    }
+    return path;
 }
 
 function mapDependencyId(from, to, metadata) {
