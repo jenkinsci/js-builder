@@ -240,7 +240,8 @@ function getPackageInfoFromModulePath(modulePath) {
             return {
                 name: packageJson.name,
                 version: packageJson.version,
-                path: toRelativePath(paths.parentDir(packageJsonFile))
+                path: toRelativePath(paths.parentDir(packageJsonFile)),
+                repository: packageJson.repository
             };
         }
     }
