@@ -197,11 +197,12 @@ function extractModuleDefs(packEntries) {
 
         for (var moduleName in packEntry.deps) {
             if (packEntry.deps.hasOwnProperty(moduleName)) {
-                var packId = packEntry.deps[moduleName];
-                var moduleDef = modulesDefs[packId];
+                var modulePath = packEntry.deps[moduleName];
+                var moduleDef = modulesDefs[modulePath];
                 if (!moduleDef) {
                     moduleDef = {
-                        id: packId,
+                        id: modulePath,
+                        packageInfo: getPackageInfoFromModulePath(modulePath),
                         knownAs: [],
                         isKnownAs: function(name) {
                             // Note that we need to be very careful about how we
@@ -213,12 +214,12 @@ function extractModuleDefs(packEntries) {
                         dependants: [],
                         dependancies: []
                     };
-                    
-                    if (typeof packId === 'string') {
-                        moduleDef.node_module = nodeModulesRelPath(packId);
+
+                    if (typeof modulePath === 'string') {
+                        moduleDef.node_module = nodeModulesRelPath(modulePath);
                     }
-                    
-                    modulesDefs[packId] = moduleDef;
+
+                    modulesDefs[modulePath] = moduleDef;
                 }
                 if (moduleDef.knownAs.indexOf(moduleName) === -1) {
                     moduleDef.knownAs.push(moduleName);
@@ -228,6 +229,20 @@ function extractModuleDefs(packEntries) {
     }
 
     return modulesDefs;
+}
+
+function getPackageInfoFromModulePath(modulePath) {
+    if (typeof modulePath === 'string') {
+        var packageJsonFile = paths.findClosest('package.json', paths.parentDir(modulePath));
+        if (packageJsonFile) {
+            var packageJson = require(packageJsonFile);
+            return {
+                name: packageJson.name,
+                version: packageJson.version
+            };
+        }
+    }
+    return undefined;
 }
 
 function addDependantsToDefs(metadata) {
