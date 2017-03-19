@@ -239,7 +239,8 @@ function getPackageInfoFromModulePath(modulePath) {
             var packageJson = require(packageJsonFile);
             return {
                 name: packageJson.name,
-                version: packageJson.version
+                version: packageJson.version,
+                path: toRelativePath(paths.parentDir(packageJsonFile))
             };
         }
     }
