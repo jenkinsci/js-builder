@@ -1,6 +1,4 @@
-var jsModules = require('@jenkins-cd/js-modules');
-
-jsModules.exportModule('{{normalizedPackageName}}', '{{jsModuleNames.patch}}', require('{{packageName}}'));
-jsModules.exportModule('{{normalizedPackageName}}', '{{jsModuleNames.minor}}', require('{{packageName}}'));
-jsModules.exportModule('{{normalizedPackageName}}', '{{jsModuleNames.major}}', require('{{packageName}}'));
-jsModules.exportModule('{{normalizedPackageName}}', '{{jsModuleNames.any}}', require('{{packageName}}'));
+___$$$___doExport('{{normalizedPackageName}}', '{{jsModuleNames.patch}}', require('{{packageName}}'));
+___$$$___doExport('{{normalizedPackageName}}', '{{jsModuleNames.minor}}', require('{{packageName}}'));
+___$$$___doExport('{{normalizedPackageName}}', '{{jsModuleNames.major}}', require('{{packageName}}'));
+___$$$___doExport('{{normalizedPackageName}}', '{{jsModuleNames.any}}', require('{{packageName}}'));

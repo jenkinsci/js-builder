@@ -1,6 +1,34 @@
 var ___$$$___jsModules = require('@jenkins-cd/js-modules');
 
-___$$$___jsModules.whoami('{{#if bundle.bundleExportNamespace}}{{bundle.bundleExportNamespace}}:{{/if}}{{bundle.as}}');
+var whoami = '{{#if bundle.bundleExportNamespace}}{{bundle.bundleExportNamespace}}:{{/if}}{{bundle.as}}';
+
+___$$$___jsModules.whoami(whoami);
+
+
+function ___$$$___doExport(namespace, moduleName, module) {
+    ___$$$___jsModules.exportModule(namespace, moduleName, module);
+    if (window.sessionStorage) {
+        var keyPrefix = 'jenkins-cd/js-modules/export.tracking:';
+        if (!jenkinsCIGlobal._internal.trackMarker) {
+            jenkinsCIGlobal._internal.trackMarker = true;
+            var toRemove = [];
+            for (var i = 0; i < sessionStorage.length; i++) {
+                var key = sessionStorage.key(i);
+                if (key.indexOf(keyPrefix) === 0) {
+                    toRemove.push(key);
+                }
+            }
+            for (var i = 0; i < toRemove.length; i++) {
+                sessionStorage.removeItem(toRemove[i]);
+            }
+        }
+        var moduleBundleId = (namespace !== undefined ? (namespace + ':' + moduleName) : moduleName);
+        sessionStorage.setItem(keyPrefix + moduleBundleId, JSON.stringify({
+            at: Date.now(),
+            by: whoami
+        }))
+    }
+}
 
 /*** Start Module Exec Function ***************************************/
 function ___$$$___exec(onExec) {
@@ -11,14 +39,14 @@ function ___$$$___exec(onExec) {
 
 function ___$$$___doExports() {
     // Do exports, if any ....
-    {{#if entryExport}}___$$$___jsModules.exportModule({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
+    {{#if entryExport}}___$$$___doExport({{entryExport.namespace}}, '{{bundle.as}}', {{entryExport.module}});{{/if}}
 
     {{#if dependencyExports}}
         function doDependencyExport(module, normalizedPackageName, jsModuleNames) {
-            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.patch, module);
-            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.minor, module);
-            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.major, module);
-            ___$$$___jsModules.exportModule(normalizedPackageName, jsModuleNames.any, module);
+            ___$$$___doExport(normalizedPackageName, jsModuleNames.patch, module);
+            ___$$$___doExport(normalizedPackageName, jsModuleNames.minor, module);
+            ___$$$___doExport(normalizedPackageName, jsModuleNames.major, module);
+            ___$$$___doExport(normalizedPackageName, jsModuleNames.any, module);
         }
 
         {{#each dependencyExports}}
