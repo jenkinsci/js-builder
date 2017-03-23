@@ -70,9 +70,9 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
             if (!moduleMapping.fromSpec) {
                 moduleMapping.fromSpec = new ModuleSpec(moduleMapping.from);
             }
-            
+
             mapByPackageName(moduleMapping.fromSpec.moduleName, newSource);
-            
+
             // And check are there aliases that can be mapped...
             if (moduleMapping.config && moduleMapping.config.aliases) {
                 var aliases = moduleMapping.config.aliases;
@@ -121,15 +121,32 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
     unusedModules.forEach(function(moduleId) {
         removePackEntryById(metadata, moduleId);
     });
-    
+
+    verifyDepsOkay(metadata);
+
     if (!skipFullPathToIdRewrite && !args.isArgvSpecified('--full-paths')) {
         metadata = fullPathsToIds(metadata);
     }
-    
+
     // Keeping as it's handy for debug purposes.
     //require('fs').writeFileSync('./target/bundlepack.json', JSON.stringify(packEntries, undefined, 4));
-    
+
     return metadata;
+}
+
+function verifyDepsOkay(metadata) {
+    for (var i in metadata.packEntries) {
+        var packEntry = metadata.packEntries[i];
+
+        for (var module in packEntry.deps) {
+            if (packEntry.deps.hasOwnProperty(module)) {
+                var entryDepId = packEntry.deps[module];
+                if (!metadata.modulesDefs[entryDepId]) {
+                    console.log('[WARNING] Unexpected bundling error: packEntry ' + packEntry.id + ' depends on ' + entryDepId + ' but there is no moduleDef for that.');
+                }
+            }
+        }
+    }
 }
 
 function extractBundleMetadata(packEntries) {
