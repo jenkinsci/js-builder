@@ -9,8 +9,9 @@ var unpack = require('browser-unpack');
 var browserifyTree = require('browserify-tree');
 var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var logger = require('../logger');
-var pathPrefix = process.cwd() + '/';
-var node_modules_path = process.cwd() + '/node_modules/';
+var cwd = process.cwd();
+var pathPrefix = cwd + '/';
+var node_modules_path = cwd + '/node_modules/';
 var args = require('../args');
 var paths = require('../paths');
 var maven = require('../maven');
@@ -193,40 +194,30 @@ function removeDependant(moduleDefToRemove, metadata) {
 function extractModuleDefs(packEntries) {
     var modulesDefs = {};
 
-    for (var i in packEntries) {
+    // Create a moduleDef for each pack entry
+    for (var i = 0; i < packEntries.length; i++) {
         var packEntry = packEntries[i];
+        var modulePath = packEntry.id;
+        var moduleDef = {
+            id: modulePath,
+            packageInfo: getPackageInfoFromModulePath(modulePath),
+            knownAs: [],
+            isKnownAs: function(name) {
+                // Note that we need to be very careful about how we
+                // use this. Relative module names may obviously
+                // resolve to different pack entries, depending on
+                // the context,
+                return (this.knownAs.indexOf(name) !== -1);
+            },
+            dependants: [],
+            dependancies: []
+        };
 
-        for (var moduleName in packEntry.deps) {
-            if (packEntry.deps.hasOwnProperty(moduleName)) {
-                var modulePath = packEntry.deps[moduleName];
-                var moduleDef = modulesDefs[modulePath];
-                if (!moduleDef) {
-                    moduleDef = {
-                        id: modulePath,
-                        packageInfo: getPackageInfoFromModulePath(modulePath),
-                        knownAs: [],
-                        isKnownAs: function(name) {
-                            // Note that we need to be very careful about how we
-                            // use this. Relative module names may obviously
-                            // resolve to different pack entries, depending on
-                            // the context,
-                            return (this.knownAs.indexOf(name) !== -1);
-                        },
-                        dependants: [],
-                        dependancies: []
-                    };
-
-                    if (typeof modulePath === 'string') {
-                        moduleDef.node_module = nodeModulesRelPath(modulePath);
-                    }
-
-                    modulesDefs[modulePath] = moduleDef;
-                }
-                if (moduleDef.knownAs.indexOf(moduleName) === -1) {
-                    moduleDef.knownAs.push(moduleName);
-                }
-            }
+        if (typeof modulePath === 'string') {
+            moduleDef.node_module = nodeModulesRelPath(modulePath);
         }
+
+        modulesDefs[modulePath] = moduleDef;
     }
 
     return modulesDefs;
@@ -341,6 +332,7 @@ function getPackEntriesByNodeModulesPath(metadata, node_modules_path) {
 }
 
 function removePackEntryById(metadata, id) {
+    delete metadata.modulesDefs[id];
     for (var packId in metadata.packEntries) {
         if (metadata.packEntries.hasOwnProperty(packId)) {
             if (metadata.packEntries[packId].id.toString() === id.toString()) {
@@ -405,7 +397,9 @@ function fullPathsToIds(metadata) {
 }
 
 function toRelativePath(path) {
-    if (path.indexOf(pathPrefix) === 0) {
+    if (path === cwd) {
+        return '';
+    } else if (path.indexOf(pathPrefix) === 0) {
         return path.substring(pathPrefix.length);
     }
     return path;
