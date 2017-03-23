@@ -119,7 +119,9 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
     // Scan the bundle again now and remove all unused stragglers.
     const unusedModules = browserifyTree.getUnusedModules(metadata.packEntries);
     unusedModules.forEach(function(moduleId) {
-        removePackEntryById(metadata, moduleId);
+        if (!hasDeps(moduleId, metadata, unusedModules)) {
+            removePackEntryById(metadata, moduleId);
+        }
     });
 
     verifyDepsOkay(metadata);
@@ -147,6 +149,29 @@ function verifyDepsOkay(metadata) {
             }
         }
     }
+}
+
+function hasDeps(moduleName, metadata, ignoring) {
+    for (var i in metadata.packEntries) {
+        var packEntry = metadata.packEntries[i];
+
+        if (ignoring && ignoring.indexOf(packEntry.id)) {
+            // Don't include this pack entry
+            // as one to check.
+            continue;
+        }
+
+        for (var module in packEntry.deps) {
+            if (packEntry.deps.hasOwnProperty(module)) {
+                var entryDepId = packEntry.deps[module];
+                if (entryDepId === moduleName) {
+                    // this pack depends on that module.
+                    return packEntry.id;
+                }
+            }
+        }
+    }
+    return undefined;
 }
 
 function extractBundleMetadata(packEntries) {
@@ -265,6 +290,9 @@ function addDependantsToDefs(metadata) {
             if (packEntry.deps.hasOwnProperty(module)) {
                 var entryDepId = packEntry.deps[module];
                 var moduleDef = metadata.modulesDefs[entryDepId];
+                if (!moduleDef) {
+                    continue;
+                }
                 if (moduleDef.dependants.indexOf(packEntry.id) === -1) {
                     moduleDef.dependants.push(packEntry.id);
                 }
