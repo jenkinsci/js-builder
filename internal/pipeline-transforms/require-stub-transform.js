@@ -268,6 +268,9 @@ function addDependantsToDefs(metadata) {
                 if (moduleDef.dependants.indexOf(packEntry.id) === -1) {
                     moduleDef.dependants.push(packEntry.id);
                 }
+                if (moduleDef.knownAs.indexOf(module) === -1) {
+                    moduleDef.knownAs.push(module);
+                }
             }
         }
     }
@@ -424,7 +427,13 @@ function toRelativePath(path) {
 
 function mapDependencyId(from, to, metadata) {
     var dedupeSourceFrom = 'arguments[4]["' + from + '"][0].apply(exports,arguments)';
-    var dedupeSourceTo = 'arguments[4][' + to + '][0].apply(exports,arguments)';
+    var dedupeSourceTo;
+
+    if (typeof to === 'number') {
+        dedupeSourceTo = 'arguments[4][' + to + '][0].apply(exports,arguments)';
+    } else {
+        dedupeSourceTo = 'arguments[4]["' + to + '"][0].apply(exports,arguments)';
+    }
 
     for (var i in metadata.packEntries) {
         if (metadata.packEntries.hasOwnProperty(i)) {
