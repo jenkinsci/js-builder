@@ -105,10 +105,16 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
         var moduleDef = metadata.modulesDefs[packEntry.id];
 
         if (moduleDef) {
+            var originalDeps = packEntry.deps;
+
             packEntry.source = newSource;
             packEntry.deps = {
                 '@jenkins-cd/js-modules': jsModulesModuleDef[0].id
             };
+
+            // Need to look at all the original dependencies and
+            // remove them if nothing else is depending on them.
+            removeUnusedDeps(metadata, originalDeps);
         }
     }
 
@@ -343,11 +349,28 @@ function getPackEntriesByNodeModulesPath(metadata, node_modules_path) {
 
 function removePackEntryById(metadata, id) {
     delete metadata.modulesDefs[id];
-    for (var packId in metadata.packEntries) {
-        if (metadata.packEntries.hasOwnProperty(packId)) {
-            if (metadata.packEntries[packId].id.toString() === id.toString()) {
-                metadata.packEntries.splice(packId, 1);
-                return;
+    for (var i = 0; i < metadata.packEntries.length; i++) {
+        var packEntry = metadata.packEntries[i];
+        if (packEntry.id.toString() === id.toString()) {
+            // Remove that pack entry from the bundle.
+            metadata.packEntries.splice(i, 1);
+            // Need to look at all the dependencies of the remove
+            // pack entry, and recursively remove any of them where
+            // there's no longer anything depending on them.
+            removeUnusedDeps(metadata, packEntry.deps);
+            return;
+        }
+    }
+}
+
+function removeUnusedDeps(metadata, deps) {
+    for (var dep in deps) {
+        if (deps.hasOwnProperty(dep)) {
+            var depId = deps[dep];
+            if (!hasDeps(depId, metadata)) {
+                // No longer anythying depending on it, so
+                // remove it from the bundle
+                removePackEntryById(metadata, depId);
             }
         }
     }
