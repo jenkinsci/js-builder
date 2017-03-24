@@ -1,32 +1,55 @@
 var ___$$$___jsModules = require('@jenkins-cd/js-modules');
 
+if (!window.jenkinsCIGlobal) {
+    window.jenkinsCIGlobal = {};
+}
+if (!window.jenkinsCIGlobal._internal) {
+    window.jenkinsCIGlobal._internal = {};
+}
+
 var whoami = '{{#if bundle.bundleExportNamespace}}{{bundle.bundleExportNamespace}}:{{/if}}{{bundle.as}}';
+var loadTimestamp = Date.now();
 
 ___$$$___jsModules.whoami(whoami);
 
+// Clear out the session storage if this is the first
+// bundle to export on the page.
+var trackKeyPrefix = 'jenkins-cd/js-modules/export.tracking:';
+if (window.sessionStorage && !jenkinsCIGlobal._internal.bundleLoadIdx) {
+    jenkinsCIGlobal._internal.bundleLoadIdx = 0;
+    var toRemove = [];
+    for (var i = 0; i < sessionStorage.length; i++) {
+        var key = sessionStorage.key(i);
+        if (key.indexOf(trackKeyPrefix) === 0) {
+            toRemove.push(key);
+        }
+    }
+    for (var i = 0; i < toRemove.length; i++) {
+        sessionStorage.removeItem(toRemove[i]);
+    }
+}
+jenkinsCIGlobal._internal.bundleLoadIdx++;
+
+var thisBundleLoadIdx = jenkinsCIGlobal._internal.bundleLoadIdx;
 
 function ___$$$___doExport(namespace, moduleName, module) {
-    ___$$$___jsModules.exportModule(namespace, moduleName, module);
-    if (window.sessionStorage) {
-        var keyPrefix = 'jenkins-cd/js-modules/export.tracking:';
-        if (!jenkinsCIGlobal._internal.trackMarker) {
-            jenkinsCIGlobal._internal.trackMarker = true;
-            var toRemove = [];
-            for (var i = 0; i < sessionStorage.length; i++) {
-                var key = sessionStorage.key(i);
-                if (key.indexOf(keyPrefix) === 0) {
-                    toRemove.push(key);
+    var moduleBundleId = (namespace !== undefined ? (namespace + ':' + moduleName) : moduleName);
+    try {
+        ___$$$___jsModules.requireModule(moduleBundleId);
+        // No exception => already exported. Shouldn't happen, but okay !!
+        return;
+    } catch (e) {
+        // Not exported yet, hence exception on require. Okay to export !!
+        ___$$$___jsModules.exportModule(namespace, moduleName, module);
+        if (window.sessionStorage) {
+            sessionStorage.setItem(trackKeyPrefix + moduleBundleId, JSON.stringify({
+                at: loadTimestamp,
+                by: {
+                    bundleId: whoami,
+                    bundleLoadIdx: thisBundleLoadIdx
                 }
-            }
-            for (var i = 0; i < toRemove.length; i++) {
-                sessionStorage.removeItem(toRemove[i]);
-            }
+            }))
         }
-        var moduleBundleId = (namespace !== undefined ? (namespace + ':' + moduleName) : moduleName);
-        sessionStorage.setItem(keyPrefix + moduleBundleId, JSON.stringify({
-            at: Date.now(),
-            by: whoami
-        }))
     }
 }
 
