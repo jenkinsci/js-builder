@@ -7,6 +7,7 @@ var ModuleSpec = require('@jenkins-cd/js-modules/js/ModuleSpec');
 var cwd = process.cwd();
 var templates = require('./templates');
 var exportModuleTemplate = templates.getTemplate('export-module.hbs');
+var args = require('./args');
 
 exports.bundleFor = function(builder, packageName) {
     var packageSpec = new ModuleSpec(packageName);
@@ -26,8 +27,8 @@ exports.bundleFor = function(builder, packageName) {
     var jsModuleNames = extVersionMetadata.jsModuleNames;
     var installedVersion = extVersionMetadata.installedVersion;
     var inDir = 'target/classes/org/jenkins/ui/jsmodules/' + normalizedPackageName;
-    
-    if (!fs.existsSync(cwd + '/' + inDir + '/' + jsModuleNames.filenameFor(installedVersion) + '.js')) {
+
+    if (args.isArgvSpecified('--forceBundleGen') || !fs.existsSync(cwd + '/' + inDir + '/' + jsModuleNames.filenameFor(installedVersion) + '.js')) {
         // We need to generate an adjunct bundle for the package.
         var bundleSrc = generateBundleSrc(extVersionMetadata);
         builder.bundle(bundleSrc, packageName + '@' + installedVersion.asBaseVersionString())
@@ -37,7 +38,7 @@ exports.bundleFor = function(builder, packageName) {
     } else {
         // The bundle has already been generated. No need to do it again.
         // For linked modules ... do an rm -rf of the target dir ... sorry :)
-        logger.logInfo('Bundle for "' + packageName + '" already created. Delete "target" directory ad run bundle again to recreate.');
+        logger.logInfo('Bundle for "' + packageName + '" already created. Delete "target" directory and run bundle again to recreate.');
     }
 
     return extVersionMetadata.importAs();
