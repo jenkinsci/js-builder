@@ -109,10 +109,6 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
             packEntry.deps = {
                 '@jenkins-cd/js-modules': jsModulesModuleDef[0].id
             };
-
-            // Go to all of the dependencies and remove this module from
-            // it's list of dependants.
-            removeDependant(moduleDef, metadata);
         }
     }
 
@@ -196,41 +192,10 @@ function extractBundleMetadata(packEntries) {
         }
     };
 
-    // We could remove unused modules from the packEntries at this point i.e. modules
-    // that did not make an entry in modulesDefs are modules that nothing depends on.
-    // Is there any good reason why these can not be removed from the bundle? Is there
-    // a reason why browserify did not remove them? I've (TF) seen this and I'm not
-    // talking about the entry module, which would often not have anything depending
-    // on it.
-
-    addDependantsToDefs(metadata);
+    addKnownAsToDefs(metadata);
     addDependanciesToDefs(metadata);
 
     return metadata;
-}
-
-function removeDependant(moduleDefToRemove, metadata) {
-    for (var packId in metadata.modulesDefs) {
-        if (metadata.modulesDefs.hasOwnProperty(packId)) {
-            var moduleDef = metadata.modulesDefs[packId];
-            if (moduleDef && moduleDef !== moduleDefToRemove) {
-                var dependantEntryIndex = moduleDef.dependants.indexOf(moduleDefToRemove.id);
-                if (dependantEntryIndex !== -1) {
-                    moduleDef.dependants.splice(dependantEntryIndex, 1);
-                    if (moduleDef.dependants.length === 0 && !isReferencedByDedupe(metadata, moduleDef.id)) {
-                        // If this module no longer has any dependants (i.e. nothing depends on it),
-                        // that means that we can remove this module from the bundle. In turn, that
-                        // also means that we can remove this module from the dependants list of other
-                        // modules in the bundle. Therefore, there's a potential cascading effect that
-                        // prunes the bundle of modules that are no longer in use as a result of
-                        // mapping/stubbing modules.
-                        removePackEntryById(metadata, moduleDef.id);
-                        removeDependant(moduleDef, metadata);
-                    }
-                }
-            }
-        }
-    }
 }
 
 function extractModuleDefs(packEntries) {
@@ -242,6 +207,7 @@ function extractModuleDefs(packEntries) {
         var modulePath = packEntry.id;
         var moduleDef = {
             id: modulePath,
+            entry: packEntry.entry,
             packageInfo: getPackageInfoFromModulePath(modulePath),
             knownAs: [],
             isKnownAs: function(name) {
@@ -251,7 +217,6 @@ function extractModuleDefs(packEntries) {
                 // the context,
                 return (this.knownAs.indexOf(name) !== -1);
             },
-            dependants: [],
             dependancies: []
         };
 
@@ -282,19 +247,16 @@ function getPackageInfoFromModulePath(modulePath) {
     return undefined;
 }
 
-function addDependantsToDefs(metadata) {
-    for (var i in metadata.packEntries) {
+function addKnownAsToDefs(metadata) {
+    for (var i = 0; i < metadata.packEntries.length; i++) {
         var packEntry = metadata.packEntries[i];
 
         for (var module in packEntry.deps) {
             if (packEntry.deps.hasOwnProperty(module)) {
                 var entryDepId = packEntry.deps[module];
                 var moduleDef = metadata.modulesDefs[entryDepId];
-                if (!moduleDef) {
+                if (!moduleDef || moduleDef.entry) {
                     continue;
-                }
-                if (moduleDef.dependants.indexOf(packEntry.id) === -1) {
-                    moduleDef.dependants.push(packEntry.id);
                 }
                 if (moduleDef.knownAs.indexOf(module) === -1) {
                     moduleDef.knownAs.push(module);

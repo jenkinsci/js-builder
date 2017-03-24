@@ -9,6 +9,7 @@ describe("require-stub-transform", function () {
         buildBrowserPack('module1.js', function (packEntries) {
             var metadata = transformModule.updateBundleStubs(packEntries, []);
 
+            //console.log(metadata.packEntries);
             //logMetadata(metadata);
 
             // Check we have defs for all modules. We won't have a def for
@@ -147,12 +148,12 @@ describe("require-stub-transform", function () {
             // We should have defs for all modules except module4, module5 and module6.
             var dedupeOnePackEntry = getPackEntryByName(metadata, './dedupe-one');
             var dedupeTwoPackEntry = getPackEntryByName(metadata, './dedupe-two');
-            
+
             expect(dedupeOnePackEntry).toBeDefined();
             expect(dedupeTwoPackEntry).toBeDefined();
             expect(dedupeOnePackEntry.id).toBe(2);
             expect(dedupeTwoPackEntry.id).toBe(3);
-            
+
             // The contents of both these modules are identical, causing browserify
             // to optimize by pointing dedupeTwoPackEntry to just point to dedupeOnePackEntry.
             // We ant to check that the module id was properly translated.
@@ -160,7 +161,7 @@ describe("require-stub-transform", function () {
 
             done()
         });
-    });    
+    });
 });
 
 function getPackEntryByName(metadata, name) {
