@@ -71,22 +71,22 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
                 moduleMapping.fromSpec = new ModuleSpec(moduleMapping.from);
             }
 
-            mapByPackageName(moduleMapping.fromSpec.moduleName, newSource);
+            mapByPackageName(moduleMapping.fromSpec.moduleName, importAs, newSource);
 
             // And check are there aliases that can be mapped...
             if (moduleMapping.config && moduleMapping.config.aliases) {
                 var aliases = moduleMapping.config.aliases;
                 for (var ii = 0; ii < aliases.length; ii++) {
-                    mapByNodeModulesPath(aliases[ii], newSource);
+                    mapByNodeModulesPath(aliases[ii], importAs, newSource);
                 }
             }
         }
     }
 
-    function mapByPackageName(moduleName, newSource) {
+    function mapByPackageName(moduleName, importModule, newSource) {
         var mappedPackEntries = metadata.getPackEntriesByName(moduleName);
         if (mappedPackEntries.length === 1) {
-            setPackSource(mappedPackEntries[0], newSource);
+            setPackSource(mappedPackEntries[0], importModule, newSource);
         } else if (mappedPackEntries.length > 1) {
             logger.logWarn('Cannot map module "' + moduleName + '". Multiple bundle map entries are known by this name (in different contexts).');
         } else {
@@ -95,13 +95,13 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
             // See removeDependant and how it calls removePackEntryById.
         }
     }
-    function mapByNodeModulesPath(node_modules_path, newSource) {
+    function mapByNodeModulesPath(node_modules_path, importModule, newSource) {
         var packEntry = metadata.getPackEntriesByNodeModulesPath(node_modules_path);
         if (packEntry) {
-            setPackSource(packEntry, newSource);
+            setPackSource(packEntry, importModule, newSource);
         }
     }
-    function setPackSource(packEntry, newSource) {
+    function setPackSource(packEntry, importModule, newSource) {
         var moduleDef = metadata.modulesDefs[packEntry.id];
 
         if (moduleDef) {
@@ -111,6 +111,13 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
             packEntry.deps = {
                 '@jenkins-cd/js-modules': jsModulesModuleDef[0].id
             };
+
+            // Mark the moduleDef with info that helps us recognise that it
+            // was stubbed.
+            moduleDef.stubbed = {
+                importModule: importModule
+            };
+            // console.log('**** stubbing ' + packEntry.id + ' to import ' + importModule, moduleDef);
 
             // Need to look at all the original dependencies and
             // remove them if nothing else is depending on them.
