@@ -356,25 +356,6 @@ function removeUnusedDeps(metadata, deps) {
     }
 }
 
-/**
- * Check all packs in the bundle, returning <code>true</code> if there's a pack
- * that contains a deduped reference to the supplied pack Id.
- * @param metadata Bundle metadata.
- * @param packId Pack Id.
- * @returns {boolean} 
- */
-function isReferencedByDedupe(metadata, packId) {
-    for (var i in metadata.packEntries) {
-        if (metadata.packEntries.hasOwnProperty(i)) {
-            var packEntry = metadata.packEntries[i];
-            if (packEntry.source === 'arguments[4]["' + packId + '"][0].apply(exports,arguments)') {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 function fullPathsToTruncatedPaths(metadata) {
     for (var i in metadata.packEntries) {
         if (metadata.packEntries.hasOwnProperty(i)) {
