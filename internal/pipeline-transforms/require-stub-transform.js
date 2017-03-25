@@ -206,7 +206,6 @@ function extractBundleMetadata(packEntries) {
     };
 
     addKnownAsToDefs(metadata);
-    addDependanciesToDefs(metadata);
 
     return metadata;
 }
@@ -229,8 +228,7 @@ function extractModuleDefs(packEntries) {
                 // resolve to different pack entries, depending on
                 // the context,
                 return (this.knownAs.indexOf(name) !== -1);
-            },
-            dependancies: []
+            }
         };
 
         if (typeof modulePath === 'string') {
@@ -273,31 +271,6 @@ function addKnownAsToDefs(metadata) {
                 }
                 if (moduleDef.knownAs.indexOf(module) === -1) {
                     moduleDef.knownAs.push(module);
-                }
-            }
-        }
-    }
-}
-
-function addDependanciesToDefs(metadata) {
-    for (var i in metadata.packEntries) {
-        var packEntry = metadata.packEntries[i];
-        var moduleDef = metadata.modulesDefs[packEntry.id];
-
-        if (!moduleDef) {
-            // This is only expected if it's the entry module.
-            if (!packEntry.entry) {
-                // No moduleDef created for moduleId with that pack ID. This module probably has
-                // nothing depending on it (and in reality, could probably be removed from the bundle).
-            }
-            continue;
-        }
-
-        for (var module in packEntry.deps) {
-            if (packEntry.deps.hasOwnProperty(module)) {
-                var entryDepId = packEntry.deps[module];
-                if (moduleDef.dependancies.indexOf(entryDepId) === -1) {
-                    moduleDef.dependancies.push(entryDepId);
                 }
             }
         }
