@@ -414,7 +414,7 @@ function fullPathsToTruncatedPaths(metadata) {
         }
     }
 
-    return extractBundleMetadata(metadata.packEntries);
+    return metadata;
 }
 
 function fullPathsToIds(metadata) {
@@ -433,7 +433,7 @@ function fullPathsToIds(metadata) {
         }
     }
 
-    return extractBundleMetadata(metadata.packEntries);
+    return metadata;
 }
 
 function toRelativePath(path) {
@@ -455,6 +455,7 @@ function mapDependencyId(from, to, metadata) {
         dedupeSourceTo = 'arguments[4]["' + to + '"][0].apply(exports,arguments)';
     }
 
+    // Fixup the pack entries
     for (var i in metadata.packEntries) {
         if (metadata.packEntries.hasOwnProperty(i)) {
             var packEntry = metadata.packEntries[i];
@@ -473,6 +474,14 @@ function mapDependencyId(from, to, metadata) {
             }
         }
     }
+
+    // Fixup the moduleDef
+    var moduleDef = metadata.modulesDefs[from];
+    // Remove the moduleDef from the id it's currently known as.
+    delete metadata.modulesDefs[from];
+    // And reset the id 'to' the new id
+    moduleDef.id = to;
+    metadata.modulesDefs[to] = moduleDef;
 }
 
 function listAllModuleNames(modulesDefs) {
