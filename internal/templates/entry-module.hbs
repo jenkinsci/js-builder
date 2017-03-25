@@ -14,7 +14,7 @@ ___$$$___jsModules.whoami(whoami);
 
 // Clear out the session storage if this is the first
 // bundle to export on the page.
-var trackKeyPrefix = 'jenkins-cd/js-modules/export.tracking:';
+var trackKeyPrefix = 'jenkins-cd/js-modules/tracking/';
 if (window.sessionStorage && !jenkinsCIGlobal._internal.bundleLoadIdx) {
     jenkinsCIGlobal._internal.bundleLoadIdx = 0;
     var toRemove = [];
@@ -30,25 +30,31 @@ if (window.sessionStorage && !jenkinsCIGlobal._internal.bundleLoadIdx) {
 }
 jenkinsCIGlobal._internal.bundleLoadIdx++;
 
-var thisBundleLoadIdx = jenkinsCIGlobal._internal.bundleLoadIdx;
+if (window.sessionStorage) {
+    sessionStorage.setItem(trackKeyPrefix + 'load:' + whoami, JSON.stringify({
+        event: 'load',
+        bundleId: whoami,
+        at: loadTimestamp,
+        loadIdx: jenkinsCIGlobal._internal.bundleLoadIdx
+    }));
+}
 
 function ___$$$___doExport(namespace, moduleName, module) {
-    var moduleBundleId = (namespace !== undefined ? (namespace + ':' + moduleName) : moduleName);
+    var exportedModuleId = (namespace !== undefined ? (namespace + ':' + moduleName) : moduleName);
     try {
-        ___$$$___jsModules.requireModule(moduleBundleId);
+        ___$$$___jsModules.requireModule(exportedModuleId);
         // No exception => already exported. Shouldn't happen, but okay !!
         return;
     } catch (e) {
         // Not exported yet, hence exception on require. Okay to export !!
         ___$$$___jsModules.exportModule(namespace, moduleName, module);
         if (window.sessionStorage) {
-            sessionStorage.setItem(trackKeyPrefix + moduleBundleId, JSON.stringify({
+            sessionStorage.setItem(trackKeyPrefix + 'export:' + exportedModuleId, JSON.stringify({
+                event: 'export',
+                moduleId: exportedModuleId,
                 at: loadTimestamp,
-                by: {
-                    bundleId: whoami,
-                    bundleLoadIdx: thisBundleLoadIdx
-                }
-            }))
+                bundleId: whoami
+            }));
         }
     }
 }
