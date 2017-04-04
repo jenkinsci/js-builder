@@ -268,10 +268,9 @@ exports.doJSBundle = function(bundle, applyImports) {
         var bufferedTextTransform = require('./pipeline-transforms/buffered-text-accumulator-transform');
         var requireStubTransform = require('./pipeline-transforms/require-stub-transform');
         var pack = require('browser-pack');
-        var bundleInfoOutFile = bundleOutFile + '-json.js'; // .json file can't be loaded as an adjunct (ffs)
 
         bundleOutput = bundleOutput.pipe(bufferedTextTransform())// gathers together all the bundle JS, preparing for the next pipeline stage
-            .pipe(requireStubTransform.pipelinePlugin(bundle, bundleInfoOutFile)) // transform the require stubs
+            .pipe(requireStubTransform.pipelinePlugin(bundle, bundleOutFile)) // transform the require stubs
             .pipe(pack()); // repack the bundle after the previous transform
     }
 

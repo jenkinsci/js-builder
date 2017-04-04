@@ -16,7 +16,7 @@ var args = require('../args');
 var paths = require('../paths');
 var maven = require('../maven');
 
-function pipelingPlugin(bundleDef, bundleInfoOutFile) {
+function pipelingPlugin(bundleDef, bundleOutFile) {
     return through.obj(function (bundle, encoding, callback) {
         if (!(bundle instanceof Buffer)) {
             callback(new Error('Sorry, this transform only supports Buffers.'));
@@ -31,14 +31,18 @@ function pipelingPlugin(bundleDef, bundleInfoOutFile) {
         var bundleInfo = {
             jsModulesId: bundleDef.asModuleSpec.importAs(),
             created: Date.now(),
-            jsBuilderVer: getBuilderVersion(),
-            packMetadata: metadata
+            jsBuilderVer: getBuilderVersion()
         };
         if (maven.isHPI()) {
             bundleInfo.hpiPluginId = maven.getArtifactId();
         }
-        paths.mkdirp(paths.parentDir(bundleInfoOutFile));
-        require('fs').writeFileSync(bundleInfoOutFile, JSON.stringify(bundleInfo));
+        bundleInfo.moduleDefs = metadata.modulesDefs;
+
+        // Dump data that can be used by tooling.
+        // .json file can't be loaded as an adjunct (ffs :) )
+        paths.mkdirp(paths.parentDir(bundleOutFile));
+        require('fs').writeFileSync(bundleOutFile + '-info.js', JSON.stringify(bundleInfo));
+        require('fs').writeFileSync(bundleOutFile + '-packEntries.js', JSON.stringify(metadata.packEntries));
 
         // We told updateBundleStubs (above) to skipFullPathToIdRewrite,
         // so we need to do that before going further.

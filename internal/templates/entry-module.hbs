@@ -34,6 +34,7 @@ if (window.sessionStorage) {
     sessionStorage.setItem(trackKeyPrefix + 'load:' + whoami, JSON.stringify({
         event: 'load',
         bundleId: whoami,
+        bundlePath: '{{bundle.bundleInDir}}/{{bundle.bundleOutputFile}}',
         at: loadTimestamp,
         loadIdx: jenkinsCIGlobal._internal.bundleLoadIdx
     }));
