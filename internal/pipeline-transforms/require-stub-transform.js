@@ -121,6 +121,7 @@ function updateBundleStubs(packEntries, moduleMappings, skipFullPathToIdRewrite)
             moduleDef.stubbed = {
                 importModule: importModule
             };
+            moduleDef.size = packEntry.source.length;
             // console.log('**** stubbing ' + packEntry.id + ' to import ' + importModule, moduleDef);
 
             // Need to look at all the original dependencies and
@@ -226,6 +227,7 @@ function extractModuleDefs(packEntries) {
             entry: packEntry.entry,
             packageInfo: getPackageInfoFromModulePath(modulePath),
             knownAs: [],
+            size: packEntry.source.length,
             isKnownAs: function(name) {
                 // Note that we need to be very careful about how we
                 // use this. Relative module names may obviously
