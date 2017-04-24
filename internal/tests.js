@@ -119,6 +119,9 @@ function mochaTestTask() {
                 return;
             }
             process.exit(1);
+        }) // https://github.com/sindresorhus/gulp-mocha#test-suite-not-exiting
+        .once('end', function () {
+          process.exit();
         });
 }
 
