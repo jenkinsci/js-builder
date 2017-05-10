@@ -1,6 +1,6 @@
 {
   "name": "@jenkins-cd/js-builder",
-  "version": "0.0.57-tf-beta-1",
+  "version": "0.0.57",
   "description": "Jenkins CI JavaScript Build utilities.",
   "main": "index.js",
   "scripts": {
@@ -65,8 +65,5 @@
   "devDependencies": {
     "@jenkins-cd/js-modules": "^0.0.8",
     "zombie": "^4.2.1"
-  },
-  "peerDependencies": {
-    "@jenkins-cd/js-modules": ">=0.0.8"
   }
 }
