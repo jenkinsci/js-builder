@@ -52,6 +52,7 @@
     "handlebars": "^3.0.3",
     "jasmine-reporters": "^2.0.6",
     "jshint": "^2.x",
+    "merge-stream": "^1.0.1",
     "minifyify": "^7.1.0",
     "ncp": "^2.0.0",
     "node-http-server": "^3.0.5",

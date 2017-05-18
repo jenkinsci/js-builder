@@ -1,5 +1,6 @@
 var gulp = require('gulp');
 var gulpIf = require('gulp-if');
+var merge = require('merge-stream');
 var fs = require('fs');
 var cwd = process.cwd();
 var paths = require('./paths');
@@ -27,7 +28,7 @@ exports.exec = function(langConfig, lintConfig) {
         // with a .jshintrc file.
         runJsHint(lintConfig);
     } else {
-        runEslint(langConfig, lintConfig);
+        return runEslint(langConfig, lintConfig);
     }
 };
 
@@ -52,7 +53,7 @@ function runJsHint(lintConfig) {
         _runJsHint(paths.srcPaths);
     }
     if (lintConfig.tests) {
-        _runJsHint([paths.testSrcPath]);
+        return _runJsHint([paths.testSrcPath]);
     }
 }
 
@@ -87,6 +88,8 @@ function runEslint(langConfig, lintConfig) {
         return fixLint && file.eslint != null && file.eslint.fixed;
     }
 
+    var mergedStreams = merge();
+
     function _runEsLint(pathSet, patterns) {
 
         function getSrcPaths(path) {
@@ -99,7 +102,7 @@ function runEslint(langConfig, lintConfig) {
 
         for (var i = 0; i < pathSet.length; i++) {
             var srcPaths = getSrcPaths(pathSet[i]);
-            gulp.src(srcPaths)
+            var stream = gulp.src(srcPaths)
                 .pipe(eslint(eslintConfig))
                 .pipe(eslint.format())
                 .pipe(eslint.results(function (results) {
@@ -120,10 +123,12 @@ function runEslint(langConfig, lintConfig) {
                         }
                     }
                 }))
-                .pipe(gulpIf(isFixed, gulp.dest(pathSet[i])))
-            ;
+                .pipe(gulpIf(isFixed, gulp.dest(pathSet[i])));
+
+            mergedStreams.add(stream);
         }
     }
+
     if (lintConfig.src) {
         _runEsLint([cwd], ['index.js']);
         _runEsLint(paths.srcPaths, ['**/*.js', '**/*.jsx', '**/*.es6']);
@@ -131,4 +136,6 @@ function runEslint(langConfig, lintConfig) {
     if (lintConfig.tests) {
         _runEsLint([paths.testSrcPath], ['**/*.js', '**/*.jsx', '**/*.es6']);
     }
+
+    return mergedStreams;
 }
