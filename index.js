@@ -672,7 +672,7 @@ var tasks = {
     },
 
     lint: function() {
-        require('./internal/lint').exec(langConfig, lintConfig);
+        return require('./internal/lint').exec(langConfig, lintConfig);
     }
 };
 
