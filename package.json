@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "gulp",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepublish": "./prepublish.sh"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
     "jjsbuilder": "./cli.js",
