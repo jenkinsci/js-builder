@@ -260,8 +260,10 @@ exports.doJSBundle = function(bundle, applyImports) {
     var bundleOutput = bundler.bundle()
         .on('error', function (err) {
             logger.logError('Browserify bundle processing error');
-            if (err) {
+            if (err.stack) {
                 logger.logError('\terror: ' + err.stack);
+            } else {
+                logger.logError('\terror: ' + err);
             }
             if (main.isRebundle() || main.isRetest()) {
                 notifier.notify('bundle:watch failure', 'See console for details.');
