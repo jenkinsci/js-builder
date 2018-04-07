@@ -9,12 +9,12 @@ var logger = require('./logger');
 var args = require('./args');
 var hasJsHintConfig = fs.existsSync(cwd + '/.jshintrc');
 var esLintConfig = paths.findClosest('.eslintrc');
-
+var cleanPath = require('./bundlegen').cleanPath;
 var hasJSX = paths.hasSourceFiles('jsx');
 var hasES6 = paths.hasSourceFiles('es6');
 
 if (esLintConfig) {
-    esLintConfig = path.relative(cwd, esLintConfig);
+    esLintConfig = cleanPath(path.relative(cwd, esLintConfig));
 }
 
 exports.exec = function(langConfig, lintConfig) {
